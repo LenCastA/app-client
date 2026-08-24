@@ -159,6 +159,7 @@ import {
   useSpecialityApi,
   useStudyPlanApi,
 } from '~~/modules/apis/runtime/composables'
+import { selectDefaultHourlyLoadId } from '~/utils/hourly-load-selection'
 
 withDefaults(
   defineProps<{
@@ -264,10 +265,13 @@ watch(
       if (selectedFacultyId === store.facultyId) {
         specialityId.value = store.specialityId
         studyPlanId.value = store.studyPlanId
-        hourlyLoadId.value =
-          availableLoads.find(({ id }) => id === store.hourlyLoad?.id)?.id ??
-          availableLoads[0]?.id
-      } else hourlyLoadId.value = availableLoads[0]?.id
+        hourlyLoadId.value = selectDefaultHourlyLoadId(
+          availableLoads,
+          store.hourlyLoad?.id,
+        )
+      } else {
+        hourlyLoadId.value = selectDefaultHourlyLoadId(availableLoads, null)
+      }
     } finally {
       loadingSpecialities.value = false
       loadingHourlyLoads.value = false
