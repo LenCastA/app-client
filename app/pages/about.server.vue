@@ -27,9 +27,9 @@
           />
           <AboutProfileCard
             name="Lenin Castro"
-            role="Mantenedor & Desarrollador del Fork"
+            role="Desarrollador del Fork"
             email="Email: lenin.castro.a@uni.pe"
-            github="https://github.com/lenincastro"
+            github="https://github.com/LenCastA"
           />
         </div>
 
@@ -45,7 +45,7 @@
               label="GitHub (Original)"
             />
             <AboutSourceLinkCard
-              href="https://github.com/lenincastro"
+              href="https://github.com/LenCastA/horext"
               :icon="mdiGithub"
               label="Fork del Proyecto"
             />
