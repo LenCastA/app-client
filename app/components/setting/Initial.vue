@@ -261,13 +261,18 @@ watch(
       ])
       specialities.value = availableSpecialities
       hourlyLoads.value = availableLoads
+      const defaultLoad =
+        availableLoads.find(
+          (load) => load.name.includes('2026-2') || load.name.includes('26-2'),
+        ) ?? availableLoads[0]
+
       if (selectedFacultyId === store.facultyId) {
         specialityId.value = store.specialityId
         studyPlanId.value = store.studyPlanId
         hourlyLoadId.value =
           availableLoads.find(({ id }) => id === store.hourlyLoad?.id)?.id ??
-          availableLoads[0]?.id
-      } else hourlyLoadId.value = availableLoads[0]?.id
+          defaultLoad?.id
+      } else hourlyLoadId.value = defaultLoad?.id
     } finally {
       loadingSpecialities.value = false
       loadingHourlyLoads.value = false
