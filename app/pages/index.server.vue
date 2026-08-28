@@ -1,10 +1,16 @@
 <template>
   <div class="overflow-x-hidden bg-background text-on-surface">
     <section class="relative isolate min-h-[90vh] md:min-h-[85vh]">
-      <img
-        :src="heroImage"
-        :srcset="material.srcset"
-        :sizes="material.sizes"
+      <NuxtImg
+        src="/material2.jpg"
+        format="webp"
+        quality="85"
+        sizes="xs:100vw sm:100vw md:100vw lg:100vw xl:100vw"
+        width="1600"
+        height="900"
+        loading="eager"
+        decoding="async"
+        :preload="{ fetchPriority: 'high' }"
         alt="Cover background"
         class="absolute inset-0 h-full w-full object-cover"
       />
@@ -135,26 +141,10 @@ import {
   mdiGoogleCirclesExtended,
 } from '@mdi/js'
 
-const img = useImage()
-
 useSeoMeta({
   title: 'Inicio - Generador de Horarios Universitarios',
   description:
     'Horext es una herramienta gratuita para generar horarios de clases automáticamente. Evita cruces y optimiza tu tiempo universitario.',
-})
-
-const material = computed(() =>
-  img.getSizes('/material2.jpg', {
-    sizes: 'xs:100vw sm:100vw md:100vw lg:100vw xl:100vw',
-    modifiers: {
-      format: 'webp',
-      quality: 100,
-    },
-  }),
-)
-
-const heroImage = img('/material2.jpg', {
-  quality: 70,
 })
 
 const features = [
