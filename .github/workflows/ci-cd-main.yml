@@ -16,3 +16,12 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
+  cd:
+    name: CD
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cd.yml
+    with:
+      environment: prod
