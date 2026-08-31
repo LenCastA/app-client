@@ -7,6 +7,5 @@ export function toPreferencesDto(entity: Preferences): IUserPreferences {
     weekDays: structuredClone(entity.weekDays),
     crossings: entity.crossings,
     maxGenerationHistory: entity.maxGenerationHistory,
-    scheduleRanking: entity.scheduleRanking,
   }
 }

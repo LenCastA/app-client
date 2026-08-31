@@ -52,14 +52,6 @@ describe('persistence mappers', () => {
       weekDays: [1, 2, 3],
       crossings: 2,
       maxGenerationHistory: 10,
-      scheduleRanking: {
-        freeDays: [5],
-        earliestStartTime: '09:00',
-        latestEndTime: '18:00',
-        minimizeGaps: true,
-        minimizeDays: true,
-      },
-      externalId: undefined,
       revision: 2,
       ...audit,
     }
@@ -68,9 +60,7 @@ describe('persistence mappers', () => {
 
     expect(mapped).toEqual(record)
     mapped.weekDays.push(4)
-    mapped.scheduleRanking?.freeDays.push(6)
     expect(entity.weekDays).toEqual([1, 2, 3])
-    expect(entity.scheduleRanking.freeDays).toEqual([5])
   })
 
   it('round-trips academic configuration', () => {
@@ -168,34 +158,6 @@ describe('persistence mappers', () => {
         ScheduleGenerationPersistenceMapper.fromRecord(record),
       ),
     ).toEqual(record)
-  })
-
-  it('persists the ranking criteria used by a generation defensively', () => {
-    const record: IScheduleGeneration = {
-      id: makeUUID(),
-      generatedAt: '2026-01-01T00:00:00.000Z',
-      scheduleIds: [],
-      resultCount: 0,
-      occurrences: [],
-      crossingsSetting: 0,
-      weekDays: [1, 2, 3],
-      hourlyLoadId: 1,
-      scheduleRanking: {
-        freeDays: [5],
-        rankingPriority: 'FEWER_GAPS',
-        avoidSingleClassDays: true,
-        minimizeGaps: true,
-        minimizeDays: true,
-        maxOccupiedDays: 4,
-      },
-      revision: 1,
-      ...audit,
-    }
-    const entity = ScheduleGenerationPersistenceMapper.fromRecord(record)
-    const mapped = ScheduleGenerationPersistenceMapper.toRecord(entity)
-    expect(mapped).toEqual(record)
-    mapped.scheduleRanking?.freeDays.push(6)
-    expect(entity.scheduleRanking?.freeDays).toEqual([5])
   })
 
   it('round-trips a favorite record', () => {
