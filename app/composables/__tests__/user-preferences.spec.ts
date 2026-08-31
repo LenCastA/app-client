@@ -22,6 +22,11 @@ function makePreferences(
     crossings: 0,
     weekDays: [1, 2],
     maxGenerationHistory: 5,
+    scheduleRanking: {
+      freeDays: [],
+      minimizeGaps: true,
+      minimizeDays: true,
+    },
     ...overrides,
   }
 }
@@ -54,12 +59,18 @@ describe('useUserPreferences', () => {
   })
 
   it('returns preferences, weekDays, crossings, and maxGenerationHistory', () => {
-    const { preferences, weekDays, crossings, maxGenerationHistory } =
-      useUserPreferences()
+    const {
+      preferences,
+      weekDays,
+      crossings,
+      maxGenerationHistory,
+      scheduleRanking,
+    } = useUserPreferences()
     expect(preferences).toBeDefined()
     expect(weekDays).toBeDefined()
     expect(crossings).toBeDefined()
     expect(maxGenerationHistory).toBeDefined()
+    expect(scheduleRanking).toBeDefined()
   })
 
   it('fetchPreferences calls service.get and sets preferences when result is truthy', async () => {
@@ -84,6 +95,11 @@ describe('useUserPreferences', () => {
       crossings: 0,
       weekDays: [1, 2],
       maxGenerationHistory: 10,
+      scheduleRanking: {
+        freeDays: [],
+        minimizeGaps: true,
+        minimizeDays: true,
+      },
     }
     mockCreatePreferences.mockResolvedValue(created)
     const { createPreferences } = useUserPreferences()
@@ -159,6 +175,31 @@ describe('useUserPreferences', () => {
     await updateMaxGenerationHistory(20)
     expect(mockPatch).toHaveBeenCalledWith(expect.any(String), {
       maxGenerationHistory: 20,
+    })
+    expect(useUserPreferencesStore().preferences).toEqual(updated)
+  })
+
+  it('updates schedule ranking preferences through the service', async () => {
+    const scheduleRanking = {
+      freeDays: [5] as const,
+      earliestStartTime: '09:00',
+      latestEndTime: '18:00',
+      minimizeGaps: true,
+      minimizeDays: false,
+    }
+    const updated = makePreferences({
+      scheduleRanking: {
+        ...scheduleRanking,
+        freeDays: [...scheduleRanking.freeDays],
+      },
+    })
+    mockPatch.mockResolvedValue(asEntity(updated))
+
+    const { updateScheduleRanking } = useUserPreferences()
+    await updateScheduleRanking(updated.scheduleRanking!)
+
+    expect(mockPatch).toHaveBeenCalledWith(expect.any(String), {
+      scheduleRanking: updated.scheduleRanking,
     })
     expect(useUserPreferencesStore().preferences).toEqual(updated)
   })
