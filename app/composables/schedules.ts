@@ -1,11 +1,23 @@
 import type { IActivity } from '~/interfaces/event'
-import type { IIntersectionOccurrence } from '~/interfaces/ocurrences'
+import type { IBaseIntersectionOccurrence } from '~/interfaces/ocurrences'
 import type { ILocalGeneratedSchedule } from '~/interfaces/schedule'
-import type {
-  IBasePlannedSubject,
-  ISubjectSchedule,
-} from '~/interfaces/subject'
+import {
+  rankSchedules,
+  type ScheduleFilterDiagnostics,
+} from '~/utils/schedule-ranking'
+import type { IBasePlannedSubject } from '~/interfaces/subject'
 import CoreWorker from '@/assets/workers/core?worker'
+import type { IScheduleRankingPreferences } from '#shared/domain/types/preferences'
+
+interface ScheduleGenerationResult {
+  occurrences: IBaseIntersectionOccurrence[]
+  combinations: ILocalGeneratedSchedule[]
+  ranking?: {
+    generatedBeforeFilters: number
+    filteredOut: number
+    diagnostics: ScheduleFilterDiagnostics
+  }
+}
 
 export const useSchedulesGenerator = () => {
   const worker = shallowRef<Worker | null>(null)
@@ -21,20 +33,17 @@ export const useSchedulesGenerator = () => {
     subjects: Array<IBasePlannedSubject>,
     myEvents: Array<IActivity>,
     options: ScheduleOptions,
+    rankingPreferences?: IScheduleRankingPreferences,
   ) => {
-    return new Promise<{
-      occurrences: IIntersectionOccurrence[]
-      schedules: ISubjectSchedule[]
-      combinations: ILocalGeneratedSchedule[]
-    }>((resolve, reject) => {
+    return new Promise<ScheduleGenerationResult>((resolve, reject) => {
       if (!worker.value) reject('Not loaded worker')
       worker.value?.addEventListener(
         'message',
         (
           e: MessageEvent<{
-            occurrences: IIntersectionOccurrence[]
-            schedules: ISubjectSchedule[]
+            occurrences: IBaseIntersectionOccurrence[]
             combinations: ILocalGeneratedSchedule[]
+            ranking?: ScheduleGenerationResult['ranking']
           }>,
         ) => {
           if (!e.data) reject('No data')
@@ -44,7 +53,9 @@ export const useSchedulesGenerator = () => {
         },
         false,
       )
-      worker.value?.postMessage(JSON.stringify([subjects, myEvents, options]))
+      worker.value?.postMessage(
+        JSON.stringify([subjects, myEvents, options, rankingPreferences]),
+      )
     })
   }
 
@@ -52,13 +63,28 @@ export const useSchedulesGenerator = () => {
     subjects: Array<IBasePlannedSubject>,
     myEvents: Array<IActivity>,
     options: ScheduleOptions,
-  ) => {
-    return loadSchedulesViaWorker(subjects, myEvents, options).catch(
-      (error) => {
-        console.error(error)
-        return getSchedules(subjects, myEvents, options)
-      },
-    )
+    rankingPreferences?: IScheduleRankingPreferences,
+  ): Promise<ScheduleGenerationResult> => {
+    return loadSchedulesViaWorker(
+      subjects,
+      myEvents,
+      options,
+      rankingPreferences,
+    ).catch((error) => {
+      console.error(error)
+      const output = getSchedules(subjects, myEvents, options)
+      if (!rankingPreferences) return output
+      const ranking = rankSchedules(output.combinations, rankingPreferences)
+      return {
+        ...output,
+        combinations: ranking.ranked.map(({ schedule }) => schedule),
+        ranking: {
+          generatedBeforeFilters: output.combinations.length,
+          filteredOut: ranking.filteredOut,
+          diagnostics: ranking.diagnostics,
+        },
+      }
+    })
   }
 
   return { loadSchedules }
