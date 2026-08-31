@@ -13,9 +13,6 @@ export const toCreateRecord = (entity: BaseScheduleGeneration) => ({
   crossingsSetting: entity.crossingsSetting,
   weekDays: structuredClone(entity.weekDays),
   hourlyLoadId: entity.hourlyLoadId,
-  ...(entity.scheduleRanking
-    ? { scheduleRanking: entity.scheduleRanking }
-    : {}),
   externalId: entity.externalId,
   revision: entity.revision,
 })

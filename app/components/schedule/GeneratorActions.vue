@@ -1,8 +1,8 @@
 <template>
   <v-text-field
     v-model.number="internalCrossings"
-    class="cross-input"
-    label="Máximo de cruces"
+    class="flex-sm-1-1 flex-1-1-100 cross-input"
+    label="Cantidad de cruces"
     hide-details
     density="compact"
     max="5"
@@ -26,7 +26,6 @@
       </v-menu>
     </template>
   </v-text-field>
-  <ScheduleRankingFilters v-model="internalRanking" @apply="onApplyRanking" />
   <v-btn
     color="success"
     theme="dark"
@@ -37,36 +36,21 @@
     @click="onClickGenerate"
   >
     <v-icon> {{ mdiUpdate }} </v-icon>
-    {{ hasResults ? 'Regenerar' : 'Generar' }}
+    Generar
   </v-btn>
 </template>
 
 <script setup lang="ts">
 import { mdiHelpCircle, mdiUpdate } from '@mdi/js'
-import type { IScheduleRankingPreferences } from '#shared/domain/types/preferences'
-import ScheduleRankingFilters from './RankingFilters.vue'
-import { cloneScheduleRanking } from '~/utils/schedule-ranking'
 const props = defineProps<{
   loadingGenerate: boolean
   crossings: number
-  scheduleRanking: IScheduleRankingPreferences
-  hasResults?: boolean
 }>()
 const emit = defineEmits<{
-  (event: 'update:crossings', crossings: number): void
-  (
-    event: 'update:schedule-ranking',
-    scheduleRanking: IScheduleRankingPreferences,
-  ): void
-  (
-    event: 'click:generate',
-    crossings: number,
-    scheduleRanking: IScheduleRankingPreferences,
-  ): void
+  (event: 'update:crossings' | 'click:generate', crossings: number): void
 }>()
 
 const internalCrossings = ref(props.crossings)
-const internalRanking = ref(cloneScheduleRanking(props.scheduleRanking))
 
 watch(
   () => props.crossings,
@@ -75,50 +59,11 @@ watch(
   },
 )
 
-watch(
-  () => props.scheduleRanking,
-  (scheduleRanking) => {
-    internalRanking.value = cloneScheduleRanking(scheduleRanking)
-  },
-  { deep: true },
-)
-
-watch(
-  internalRanking,
-  (scheduleRanking) => {
-    emit('update:schedule-ranking', cloneScheduleRanking(scheduleRanking))
-  },
-  { deep: true },
-)
-
 const onUpdateCrossings = (crossings: string) => {
   emit('update:crossings', Number(crossings))
 }
 
 const onClickGenerate = () => {
-  emit(
-    'click:generate',
-    internalCrossings.value,
-    cloneScheduleRanking(internalRanking.value),
-  )
-}
-
-const onApplyRanking = (scheduleRanking: IScheduleRankingPreferences) => {
-  internalRanking.value = cloneScheduleRanking(scheduleRanking)
-  onClickGenerate()
+  emit('click:generate', internalCrossings.value)
 }
 </script>
-
-<style scoped>
-.cross-input {
-  flex: 0 0 11.5rem;
-  width: 11.5rem;
-}
-
-@media (max-width: 600px) {
-  .cross-input {
-    flex-basis: 100%;
-    width: 100%;
-  }
-}
-</style>

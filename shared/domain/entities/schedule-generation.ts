@@ -9,7 +9,6 @@ import type { IIntersectionOccurrence } from '../types/occurrences'
 import type { Weekdays } from '../types/event'
 import { DomainError } from '../errors/domain-error'
 import { Audit } from './audit'
-import type { IScheduleRankingPreferences } from '../types/preferences'
 
 export class BaseScheduleGeneration {
   protected _generatedAt: string
@@ -19,7 +18,6 @@ export class BaseScheduleGeneration {
   protected _crossingsSetting: number
   protected _weekDays: Weekdays[]
   protected _hourlyLoadId: number
-  protected _scheduleRanking?: IScheduleRankingPreferences
   protected _externalId?: ScheduleGenerationId
   protected _revision?: number
 
@@ -32,9 +30,6 @@ export class BaseScheduleGeneration {
     this._crossingsSetting = input.crossingsSetting
     this._weekDays = [...input.weekDays]
     this._hourlyLoadId = input.hourlyLoadId
-    this._scheduleRanking = input.scheduleRanking
-      ? structuredClone(input.scheduleRanking)
-      : undefined
     this._externalId = input.externalId
     this._revision = input.revision
   }
@@ -53,10 +48,6 @@ export class BaseScheduleGeneration {
     if (input.weekDays !== undefined) this._weekDays = [...input.weekDays]
     if (input.hourlyLoadId !== undefined)
       this._hourlyLoadId = input.hourlyLoadId
-    if ('scheduleRanking' in input)
-      this._scheduleRanking = input.scheduleRanking
-        ? structuredClone(input.scheduleRanking)
-        : undefined
     if ('externalId' in input) this._externalId = input.externalId
     if ('revision' in input) this._revision = input.revision
     return this
@@ -82,11 +73,6 @@ export class BaseScheduleGeneration {
   }
   get hourlyLoadId(): number {
     return this._hourlyLoadId
-  }
-  get scheduleRanking(): IScheduleRankingPreferences | undefined {
-    return this._scheduleRanking
-      ? structuredClone(this._scheduleRanking)
-      : undefined
   }
   get externalId(): ScheduleGenerationId | undefined {
     return this._externalId

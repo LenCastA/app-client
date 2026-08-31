@@ -1,6 +1,5 @@
 import { mount } from '@vue/test-utils'
 import GeneratorActions from '~/components/schedule/GeneratorActions.vue'
-import RankingFilters from '~/components/schedule/RankingFilters.vue'
 import { describe, expect, it, vi } from 'vitest'
 import { VBtn } from 'vuetify/components/VBtn'
 import { VTextField } from 'vuetify/components/VTextField'
@@ -9,13 +8,6 @@ import { VCardText } from 'vuetify/components/VCard'
 import { createVuetify } from 'vuetify'
 
 const vuetify = createVuetify()
-const scheduleRanking = {
-  freeDays: [],
-  rankingPriority: 'FEWER_DAYS' as const,
-  avoidSingleClassDays: false,
-  minimizeGaps: true,
-  minimizeDays: true,
-}
 vi.stubGlobal('visualViewport', new EventTarget())
 describe('GeneratorActions.vue', () => {
   it('renders the component correctly', () => {
@@ -23,7 +15,6 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 2,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
@@ -39,7 +30,6 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 2,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
@@ -55,7 +45,6 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 2,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
@@ -73,7 +62,6 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 2,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
@@ -93,52 +81,16 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 2,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
       },
     })
 
-    const button = wrapper
-      .findAllComponents(VBtn)
-      .find((candidate) => candidate.props('color') === 'success')!
+    const button = wrapper.findComponent(VBtn)
     await button.trigger('click')
 
-    expect(wrapper.emitted()['click:generate']).toEqual([[2, scheduleRanking]])
-  })
-
-  it('shows regenerate when results exist', () => {
-    const wrapper = mount(GeneratorActions, {
-      props: {
-        loadingGenerate: false,
-        crossings: 2,
-        scheduleRanking,
-        hasResults: true,
-      },
-      global: { plugins: [vuetify] },
-    })
-    expect(
-      wrapper
-        .findAllComponents(VBtn)
-        .find((candidate) => candidate.props('color') === 'success')
-        ?.text(),
-    ).toContain('Regenerar')
-  })
-
-  it('regenerates immediately when filters are applied', async () => {
-    const wrapper = mount(GeneratorActions, {
-      props: {
-        loadingGenerate: false,
-        crossings: 2,
-        scheduleRanking,
-      },
-      global: { plugins: [vuetify] },
-    })
-    const updated = { ...scheduleRanking, freeDays: [5] as const }
-    wrapper.findComponent(RankingFilters).vm.$emit('apply', updated)
-    await wrapper.vm.$nextTick()
-    expect(wrapper.emitted()['click:generate']).toEqual([[2, updated]])
+    expect(wrapper.emitted()['click:generate']).toEqual([[2]])
   })
 
   it('generates with the edited value before persistence finishes', async () => {
@@ -146,7 +98,6 @@ describe('GeneratorActions.vue', () => {
       props: {
         loadingGenerate: false,
         crossings: 0,
-        scheduleRanking,
       },
       global: {
         plugins: [vuetify],
@@ -154,12 +105,9 @@ describe('GeneratorActions.vue', () => {
     })
 
     await wrapper.findComponent(VTextField).find('input').setValue(1)
-    await wrapper
-      .findAllComponents(VBtn)
-      .find((candidate) => candidate.props('color') === 'success')!
-      .trigger('click')
+    await wrapper.findComponent(VBtn).trigger('click')
 
     expect(wrapper.emitted()['update:crossings']).toEqual([[1]])
-    expect(wrapper.emitted()['click:generate']).toEqual([[1, scheduleRanking]])
+    expect(wrapper.emitted()['click:generate']).toEqual([[1]])
   })
 })

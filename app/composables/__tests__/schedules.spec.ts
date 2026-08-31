@@ -106,53 +106,6 @@ describe('useSchedulesGenerator', () => {
     wrapper.unmount()
   })
 
-  it('passes ranking preferences to the worker and returns ranked metadata', async () => {
-    let capturedResolve: (value: unknown) => void
-    mockAddEventListener.mockImplementation(
-      (_event: string, handler: (e: MessageEvent) => void) => {
-        capturedResolve = (data) => handler({ data } as MessageEvent)
-      },
-    )
-
-    const TestComponent = defineComponent({
-      setup() {
-        const { loadSchedules } = useSchedulesGenerator()
-        return { loadSchedules }
-      },
-      template: '<div />',
-    })
-    const wrapper = mount(TestComponent, { attachTo: document.body })
-    const rankingPreferences = {
-      freeDays: [],
-      minimizeDays: true,
-      minimizeGaps: true,
-    }
-    const resultData = {
-      occurrences: [],
-      schedules: [],
-      combinations: [],
-      ranking: {
-        generatedBeforeFilters: 10,
-        filteredOut: 2,
-        diagnostics: { evaluatedCount: 10, freeDays: [] },
-      },
-    }
-
-    const promise = wrapper.vm.loadSchedules(
-      [],
-      [],
-      {} as never,
-      rankingPreferences,
-    )
-    capturedResolve!(resultData)
-
-    await expect(promise).resolves.toEqual(resultData)
-    expect(mockPostMessage).toHaveBeenCalledWith(
-      JSON.stringify([[], [], {}, rankingPreferences]),
-    )
-    wrapper.unmount()
-  })
-
   it('loadSchedulesViaWorker rejects when worker is not loaded', async () => {
     const TestComponent = defineComponent({
       setup() {
