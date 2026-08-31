@@ -106,6 +106,7 @@ import type { IScheduleRankingPreferences } from '#shared/domain/types/preferenc
 import {
   cloneScheduleRanking,
   getScheduleRankingMetrics,
+  rankSchedules,
   type ScheduleFilterDiagnostics,
 } from '~/utils/schedule-ranking'
 import { WEEK_DAYS_NAMES } from '~/constants/weekdays'
@@ -272,30 +273,29 @@ const generateAllUserSchedules = async (
   loadingGenerate.value = true
   try {
     localScheduleRanking.value = cloneScheduleRanking(rankingPreferences)
-    const {
-      occurrences: occurrencesData,
-      combinations,
-      ranking,
-    } = await loadSchedules(
+    const { occurrences: occurrencesData, combinations } = await loadSchedules(
       mySubjects.value,
       myEvents.value,
       {
         crossingSubjects: crossings,
       },
-      rankingPreferences,
     )
-    if (!ranking) throw new Error('No se pudo ordenar los horarios generados.')
-    generatedBeforeFilters.value = ranking.generatedBeforeFilters
+    const ranking = rankSchedules(combinations, rankingPreferences)
+    generatedBeforeFilters.value = combinations.length
     filteredOut.value = ranking.filteredOut
     filterDiagnostics.value = ranking.diagnostics
 
     await updateScheduleRanking(rankingPreferences)
-    await setResult(toRaw(combinations), toRaw(occurrencesData), {
-      crossingsSetting: crossings,
-      weekDays: toRaw(weekDays.value),
-      hourlyLoadId: toRaw(hourlyLoad.value)?.id ?? 0,
-      scheduleRanking: cloneScheduleRanking(rankingPreferences),
-    })
+    await setResult(
+      toRaw(ranking.ranked.map(({ schedule }) => schedule)),
+      toRaw(occurrencesData),
+      {
+        crossingsSetting: crossings,
+        weekDays: toRaw(weekDays.value),
+        hourlyLoadId: toRaw(hourlyLoad.value)?.id ?? 0,
+        scheduleRanking: cloneScheduleRanking(rankingPreferences),
+      },
+    )
     succces.value = true
   } catch (error) {
     generationError.value =
