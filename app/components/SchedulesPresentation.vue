@@ -20,6 +20,10 @@
       </slot>
     </div>
 
+    <div v-if="$slots.summary" class="schedule-summary px-3 pb-2">
+      <slot name="summary" :item="currentSchedule" />
+    </div>
+
     <v-divider />
     <schedules-list
       v-if="schedules.length > 0"
@@ -79,3 +83,10 @@ const { weekDays } = storeToRefs(store)
 const currentSchedule = shallowRef<IGeneratedSchedule>()
 const mode = ref(ViewMode.CALENDAR)
 </script>
+
+<style scoped>
+.schedule-summary {
+  display: flex;
+  justify-content: center;
+}
+</style>
