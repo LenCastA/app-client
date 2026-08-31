@@ -16,19 +16,3 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
-  cd:
-    name: CD
-    needs: ci
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/cd.yml
-    with:
-      environment: prod
-    secrets:
-      SERVER_IP: ${{ secrets.SERVER_IP }}
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      ENV_FILE: ${{ secrets.ENV_FILE }}
-      ENV_FILE_PATH: ${{ secrets.ENV_FILE_PATH }}
-      DOCKER_PROJECT_NAME: ${{ secrets.DOCKER_PROJECT_NAME }}
