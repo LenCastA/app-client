@@ -1,15 +1,13 @@
-import type { Ref } from 'vue'
 import { getNextAvailableEventColor } from '~/constants/event'
 import type {
   IBasePlannedSubject,
-  IPlannedSubject,
   ISubject,
   ISubjectSchedule,
 } from '~/interfaces/subject'
 import type { EnrollmentSlipEntry } from '~/utils/enrollment-slip'
 
 export type EnrollmentImportStatus =
-  'ready' | 'imported' | 'existing' | 'missing-course' | 'missing-section'
+  'ready' | 'imported' | 'missing-course' | 'missing-section'
 
 export type EnrollmentImportItem = EnrollmentSlipEntry & {
   status: EnrollmentImportStatus
@@ -18,16 +16,16 @@ export type EnrollmentImportItem = EnrollmentSlipEntry & {
 }
 
 interface EnrollmentSlipImportDependencies {
-  subjects: Ref<IPlannedSubject[]>
   findSubjects: (courseCode: string) => Promise<ISubject[]>
   findSchedules: (subject: ISubject) => Promise<ISubjectSchedule[]>
+  replaceSubjects: () => Promise<void>
   saveSubject: (subject: IBasePlannedSubject) => Promise<void>
 }
 
 export const useEnrollmentSlipImport = ({
-  subjects,
   findSubjects,
   findSchedules,
+  replaceSubjects,
   saveSubject,
 }: EnrollmentSlipImportDependencies) => {
   const dialog = ref(false)
@@ -35,6 +33,7 @@ export const useEnrollmentSlipImport = ({
   const error = ref(false)
   const errorMessage = ref('')
   const items = ref<EnrollmentImportItem[]>([])
+  const replacementStarted = ref(false)
   const readyItems = computed(() =>
     items.value.filter(
       (
@@ -44,28 +43,23 @@ export const useEnrollmentSlipImport = ({
       } => item.status === 'ready' && Boolean(item.plannedSubject),
     ),
   )
+  const hasBlockingItems = computed(() =>
+    items.value.some(
+      (item) =>
+        item.status === 'missing-course' || item.status === 'missing-section',
+    ),
+  )
 
   const prepare = async (entries: EnrollmentSlipEntry[]) => {
     dialog.value = true
     loading.value = true
     error.value = false
     items.value = []
+    replacementStarted.value = false
     try {
-      const usedColors = subjects.value.map((subject) => subject.color)
+      const usedColors: string[] = []
       const results: EnrollmentImportItem[] = []
       for (const entry of entries) {
-        const existing = subjects.value.some(
-          (item) => item.subject.course.id.toUpperCase() === entry.courseCode,
-        )
-        if (existing) {
-          results.push({
-            ...entry,
-            status: 'existing',
-            message: 'Ya está agregado.',
-          })
-          continue
-        }
-
         const subject = (await findSubjects(entry.courseCode)).find(
           (item) => item.course.id.toUpperCase() === entry.courseCode,
         )
@@ -116,9 +110,19 @@ export const useEnrollmentSlipImport = ({
   }
 
   const confirm = async () => {
+    if (hasBlockingItems.value) {
+      errorMessage.value =
+        'No se puede reemplazar la selección porque faltan cursos o secciones.'
+      error.value = true
+      return false
+    }
     loading.value = true
     error.value = false
     try {
+      if (!replacementStarted.value) {
+        await replaceSubjects()
+        replacementStarted.value = true
+      }
       for (const item of readyItems.value) {
         await saveSubject(item.plannedSubject)
         item.status = 'imported'
@@ -128,7 +132,7 @@ export const useEnrollmentSlipImport = ({
       return true
     } catch {
       errorMessage.value =
-        'La importación se interrumpió. Los cursos ya agregados se conservaron; puedes reintentar los pendientes.'
+        'La sustitución se interrumpió. Puedes reintentar y continuaremos con los cursos pendientes.'
       error.value = true
       return false
     } finally {
@@ -143,6 +147,7 @@ export const useEnrollmentSlipImport = ({
     errorMessage,
     items,
     readyItems,
+    hasBlockingItems,
     prepare,
     close,
     confirm,

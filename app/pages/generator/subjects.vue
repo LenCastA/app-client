@@ -138,13 +138,23 @@
               <span>Buscando cursos y secciones en la carga activa…</span>
             </div>
             <v-alert
-              v-else-if="readyEnrollmentImports.length"
-              type="success"
+              v-else-if="hasBlockingEnrollmentImports"
+              type="error"
               variant="tonal"
               class="mb-4"
             >
-              Se agregarán {{ readyEnrollmentImports.length }} cursos con sus
-              secciones.
+              No se reemplazará nada mientras haya cursos o secciones que no
+              existan en la carga activa.
+            </v-alert>
+            <v-alert
+              v-else-if="readyEnrollmentImports.length"
+              type="warning"
+              variant="tonal"
+              class="mb-4"
+            >
+              Se eliminarán los {{ mySubjects.length }} cursos actuales y se
+              reemplazarán por {{ readyEnrollmentImports.length }} cursos de la
+              boleta.
             </v-alert>
             <v-list lines="two">
               <v-list-item
@@ -182,10 +192,13 @@
             <v-btn
               color="primary"
               :loading="importingEnrollment"
-              :disabled="readyEnrollmentImports.length === 0"
+              :disabled="
+                readyEnrollmentImports.length === 0 ||
+                hasBlockingEnrollmentImports
+              "
               @click="completeEnrollmentImport"
             >
-              Agregar {{ readyEnrollmentImports.length }} cursos
+              Reemplazar por {{ readyEnrollmentImports.length }} cursos
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -491,13 +504,15 @@ const {
   errorMessage: enrollmentImportErrorMessage,
   items: enrollmentImports,
   readyItems: readyEnrollmentImports,
+  hasBlockingItems: hasBlockingEnrollmentImports,
   prepare: prepareEnrollmentImport,
   close: closeEnrollmentImport,
   confirm: confirmEnrollmentImport,
 } = useEnrollmentSlipImport({
-  subjects: mySubjects,
   findSubjects: findCatalogSubjects,
   findSchedules: findSubjectSchedules,
+  replaceSubjects: () =>
+    deleteSubjectsById(mySubjects.value.map((subject) => subject.id)),
   saveSubject: saveNewSubject,
 })
 

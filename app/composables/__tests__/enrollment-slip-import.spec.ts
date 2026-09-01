@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
-import type {
-  IPlannedSubject,
-  ISubject,
-  ISubjectSchedule,
-} from '~/interfaces/subject'
+import type { ISubject, ISubjectSchedule } from '~/interfaces/subject'
 import { useEnrollmentSlipImport } from '../enrollment-slip-import'
 
 const subject = {
@@ -31,9 +26,9 @@ const schedule = {
 describe('useEnrollmentSlipImport', () => {
   it('prepares exact course and section matches', async () => {
     const importer = useEnrollmentSlipImport({
-      subjects: ref([]),
       findSubjects: vi.fn().mockResolvedValue([subject]),
       findSchedules: vi.fn().mockResolvedValue([schedule]),
+      replaceSubjects: vi.fn(),
       saveSubject: vi.fn(),
     })
 
@@ -45,21 +40,19 @@ describe('useEnrollmentSlipImport', () => {
     )
   })
 
-  it('does not query courses that are already stored', async () => {
-    const findSubjects = vi.fn()
+  it('resolves courses even when the current selection contains them', async () => {
+    const findSubjects = vi.fn().mockResolvedValue([subject])
     const importer = useEnrollmentSlipImport({
-      subjects: ref([
-        { subject, schedules: [schedule], color: '#000', id: 'saved' },
-      ] as unknown as IPlannedSubject[]),
       findSubjects,
-      findSchedules: vi.fn(),
+      findSchedules: vi.fn().mockResolvedValue([schedule]),
+      replaceSubjects: vi.fn(),
       saveSubject: vi.fn(),
     })
 
     await importer.prepare([{ courseCode: 'SW603', section: 'U' }])
 
-    expect(importer.items.value[0]?.status).toBe('existing')
-    expect(findSubjects).not.toHaveBeenCalled()
+    expect(importer.items.value[0]?.status).toBe('ready')
+    expect(findSubjects).toHaveBeenCalledWith('SW603')
   })
 
   it('keeps pending courses retryable after a partial save failure', async () => {
@@ -72,12 +65,13 @@ describe('useEnrollmentSlipImport', () => {
       .fn()
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('storage failed'))
+    const replaceSubjects = vi.fn().mockResolvedValue(undefined)
     const importer = useEnrollmentSlipImport({
-      subjects: ref([]),
       findSubjects: vi.fn(async (code) =>
         code === 'SW603' ? [subject] : [secondSubject],
       ),
       findSchedules: vi.fn().mockResolvedValue([schedule]),
+      replaceSubjects,
       saveSubject,
     })
     await importer.prepare([
@@ -93,5 +87,29 @@ describe('useEnrollmentSlipImport', () => {
     ])
     expect(importer.readyItems.value).toHaveLength(1)
     expect(importer.error.value).toBe(true)
+
+    saveSubject.mockResolvedValueOnce(undefined)
+    await expect(importer.confirm()).resolves.toBe(true)
+    expect(replaceSubjects).toHaveBeenCalledTimes(1)
+    expect(saveSubject).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not start importing when clearing current courses fails', async () => {
+    const replaceSubjects = vi
+      .fn()
+      .mockRejectedValue(new Error('delete failed'))
+    const saveSubject = vi.fn()
+    const importer = useEnrollmentSlipImport({
+      findSubjects: vi.fn().mockResolvedValue([subject]),
+      findSchedules: vi.fn().mockResolvedValue([schedule]),
+      replaceSubjects,
+      saveSubject,
+    })
+    await importer.prepare([{ courseCode: 'SW603', section: 'U' }])
+
+    await expect(importer.confirm()).resolves.toBe(false)
+
+    expect(saveSubject).not.toHaveBeenCalled()
+    expect(importer.readyItems.value).toHaveLength(1)
   })
 })
