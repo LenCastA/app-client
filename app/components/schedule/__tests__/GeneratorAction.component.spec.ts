@@ -51,10 +51,10 @@ describe('GeneratorActions.vue', () => {
       },
     })
 
-    const input = wrapper.findComponent(VTextField).find('input')
-    await input.setValue(3)
+    wrapper.findComponent(VTextField).vm.$emit('update:modelValue', 1)
+    await wrapper.vm.$nextTick()
 
-    expect(wrapper.emitted()['update:crossings']?.[0]).toEqual([3])
+    expect(wrapper.emitted()['update:crossings']?.[0]).toEqual([1])
   })
 
   it('displays help text in v-menu', async () => {
@@ -72,7 +72,7 @@ describe('GeneratorActions.vue', () => {
     await menuActivator.trigger('click')
 
     expect(wrapper.findComponent(VCardText).text()).toContain(
-      'Solo se contabiliza los cruces entre cursos',
+      'Los cruces entre prácticas no se permiten',
     )
   })
 
@@ -104,10 +104,25 @@ describe('GeneratorActions.vue', () => {
       },
     })
 
-    await wrapper.findComponent(VTextField).find('input').setValue(1)
+    wrapper.findComponent(VTextField).vm.$emit('update:modelValue', 1.5)
+    await wrapper.vm.$nextTick()
     await wrapper.findComponent(VBtn).trigger('click')
 
-    expect(wrapper.emitted()['update:crossings']).toEqual([[1]])
-    expect(wrapper.emitted()['click:generate']).toEqual([[1]])
+    expect(wrapper.emitted()['update:crossings']).toEqual([[1.5]])
+    expect(wrapper.emitted()['click:generate']).toEqual([[1.5]])
+  })
+
+  it('preserves the configured number of crossing hours', () => {
+    const wrapper = mount(GeneratorActions, {
+      props: {
+        loadingGenerate: false,
+        crossings: 4,
+      },
+      global: {
+        plugins: [vuetify],
+      },
+    })
+
+    expect(wrapper.findComponent(VTextField).props('modelValue')).toBe(4)
   })
 })

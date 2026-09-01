@@ -1,10 +1,13 @@
 <template>
   <v-data-table
+    v-model="selectedSubjectIds"
     :headers="SUBJECT_HEADERS"
     :items="mySubjects"
     class="elevation-1"
     mobile-breakpoint="md"
     :mobile="null"
+    item-value="id"
+    show-select
   >
     <template #top>
       <v-toolbar density="compact" flat>
@@ -55,6 +58,17 @@
           <span class="hidden-xs-and-down">Cursos </span> Seleccionados
         </v-toolbar-title>
         <v-divider class="mx-4" inset vertical />
+        <v-btn
+          v-if="selectedSubjectIds.length"
+          class="mr-2"
+          color="error"
+          variant="tonal"
+          :prepend-icon="mdiDeleteOutline"
+          :loading="deletingSubjects"
+          @click="openBulkDelete"
+        >
+          Eliminar ({{ selectedSubjectIds.length }})
+        </v-btn>
         <v-btn to="/generator" color="primary">
           Generar<span class="hidden-xs-and-down">&nbsp; Horarios</span>
         </v-btn>
@@ -102,11 +116,27 @@
       <base-confirm-dialog
         v-if="selectedDelete"
         v-model="dialogDelete"
+        title="Eliminar curso"
+        confirm-text="Eliminar"
+        reject-text="Cancelar"
+        :loading="deletingSubjects"
         @click:confirm="deleteItemConfirm(selectedDelete)"
         @click:reject="closeDelete"
       >
         ¿Estás seguro de eliminar el curso de
         {{ selectedDelete.subject?.course?.name }}?
+      </base-confirm-dialog>
+      <base-confirm-dialog
+        v-model="dialogBulkDelete"
+        title="Eliminar cursos seleccionados"
+        confirm-text="Eliminar"
+        reject-text="Cancelar"
+        :loading="deletingSubjects"
+        @click:confirm="deleteSelectedSubjects"
+        @click:reject="closeBulkDelete"
+      >
+        ¿Estás seguro de eliminar los {{ selectedSubjectIds.length }} cursos
+        seleccionados? Esta acción también quitará sus secciones del generador.
       </base-confirm-dialog>
       <base-snackbar v-model="succcesAddCourse">
         Curso Agregado correctamente!
@@ -115,7 +145,15 @@
         Curso Actualizado correctamente!
       </base-snackbar>
       <base-snackbar v-model="succcesDeleteCourse">
-        Curso Eliminado correctamente!
+        {{ deleteSuccessMessage }}
+      </base-snackbar>
+      <base-snackbar
+        v-model="deleteCourseError"
+        variant="error"
+        :timeout="6000"
+      >
+        No se pudieron eliminar todos los cursos seleccionados. Conservamos la
+        selección pendiente para que puedas volver a intentarlo.
       </base-snackbar>
       <base-confirm-dialog
         v-if="pendingUnrecommendedSubject"
@@ -133,7 +171,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { mdiBookSearchOutline, mdiOpenInNew } from '@mdi/js'
+import { mdiBookSearchOutline, mdiDeleteOutline, mdiOpenInNew } from '@mdi/js'
 import SubjectSchedulesEdit from '~/components/subject/SchedulesEdit.vue'
 import SubjectTableItemSectionList from '~/components/subject/table/ItemSectionList.vue'
 import SubjectTableNoData from '~/components/subject/table/NoData.vue'
@@ -178,11 +216,15 @@ const configStore = useUserProfileStore()
 const {
   mySubjects,
   deleteSubjectById,
+  deleteSubjectsById,
   updateSubject,
   updateSubjectColor,
   saveNewSubject,
   refreshSubjectCatalog,
 } = useUserSubjects()
+
+const selectedSubjectIds = ref<PlannedSubjectId[]>([])
+const dialogBulkDelete = ref(false)
 
 const succcesAddCourse = ref(false)
 
@@ -385,10 +427,30 @@ const deleteItem = (item: IPlannedSubject) => {
 }
 
 const succcesDeleteCourse = ref(false)
+const deleteCourseError = ref(false)
+const deletingSubjects = ref(false)
+const deletedSubjectCount = ref(1)
+const deleteSuccessMessage = computed(() =>
+  deletedSubjectCount.value === 1
+    ? 'Curso eliminado correctamente.'
+    : `${deletedSubjectCount.value} cursos eliminados correctamente.`,
+)
 const deleteItemConfirm = async (item: IPlannedSubject) => {
-  await deleteSubjectById(item.id)
-  succcesDeleteCourse.value = true
-  closeDelete()
+  deletingSubjects.value = true
+  deleteCourseError.value = false
+  try {
+    await deleteSubjectById(item.id)
+    selectedSubjectIds.value = selectedSubjectIds.value.filter(
+      (id) => id !== item.id,
+    )
+    deletedSubjectCount.value = 1
+    succcesDeleteCourse.value = true
+    closeDelete()
+  } catch {
+    deleteCourseError.value = true
+  } finally {
+    deletingSubjects.value = false
+  }
 }
 
 const close = () => {
@@ -400,6 +462,35 @@ const close = () => {
 const closeDelete = () => {
   dialogDelete.value = false
   selectedDelete.value = undefined
+}
+
+const openBulkDelete = () => {
+  if (selectedSubjectIds.value.length > 0) dialogBulkDelete.value = true
+}
+
+const closeBulkDelete = () => {
+  dialogBulkDelete.value = false
+}
+
+const deleteSelectedSubjects = async () => {
+  const requestedCount = selectedSubjectIds.value.length
+  deletingSubjects.value = true
+  deleteCourseError.value = false
+  try {
+    await deleteSubjectsById([...selectedSubjectIds.value])
+    selectedSubjectIds.value = []
+    deletedSubjectCount.value = requestedCount
+    succcesDeleteCourse.value = true
+    closeBulkDelete()
+  } catch {
+    const existingIds = new Set(mySubjects.value.map((subject) => subject.id))
+    selectedSubjectIds.value = selectedSubjectIds.value.filter((id) =>
+      existingIds.has(id),
+    )
+    deleteCourseError.value = true
+  } finally {
+    deletingSubjects.value = false
+  }
 }
 
 const succcesUpdateCourse = ref(false)

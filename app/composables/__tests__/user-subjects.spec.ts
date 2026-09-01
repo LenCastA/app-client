@@ -92,6 +92,7 @@ describe('useUserSubjects', () => {
     expect(result.mySubjects).toBeDefined()
     expect(result.saveNewSubject).toBeTypeOf('function')
     expect(result.deleteSubjectById).toBeTypeOf('function')
+    expect(result.deleteSubjectsById).toBeTypeOf('function')
     expect(result.updateSubject).toBeTypeOf('function')
     expect(result.refreshSubjectCatalog).toBeTypeOf('function')
     expect(result.updateSubjectColor).toBeTypeOf('function')
@@ -166,6 +167,23 @@ describe('useUserSubjects', () => {
     await deleteSubjectById(missingId.id)
 
     expect(store.subjects).toEqual([first])
+  })
+
+  it('deletes multiple subjects from persistence and the store', async () => {
+    const first = makeSubject()
+    const second = makeSubject()
+    const remaining = makeSubject()
+    const store = useUserSubjectsStore()
+    store.subjects = [first, second, remaining]
+    mockDelete.mockResolvedValue(undefined)
+
+    const { deleteSubjectsById } = useUserSubjects()
+    await deleteSubjectsById([first.id, second.id])
+
+    expect(mockDelete).toHaveBeenCalledTimes(2)
+    expect(mockDelete).toHaveBeenNthCalledWith(1, expect.any(String), first.id)
+    expect(mockDelete).toHaveBeenNthCalledWith(2, expect.any(String), second.id)
+    expect(store.subjects).toEqual([remaining])
   })
 
   it('updateSubject updates in service and replaces in store', async () => {

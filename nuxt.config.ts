@@ -60,7 +60,10 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    apiUpstreamUrl: process.env.NUXT_PUBLIC_API_URL ?? '',
+    apiUpstreamUrl:
+      process.env.NUXT_API_UPSTREAM_URL ??
+      process.env.NUXT_PUBLIC_API_URL ??
+      '',
     public: {
       gsi: {
         clientId: '',

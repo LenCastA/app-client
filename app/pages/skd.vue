@@ -83,7 +83,7 @@ const { loadSchedules } = useSchedulesGenerator()
 async function fetchSchedules(subjects: IBasePlannedSubject[]) {
   loading.value = true
   const { combinations } = await loadSchedules(subjects, [], {
-    crossingSubjects: 100,
+    crossingHours: 100,
   })
   schedules.value = combinations
   loading.value = false

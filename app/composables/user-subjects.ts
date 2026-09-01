@@ -30,6 +30,10 @@ export const useUserSubjects = () => {
     store.deleteSubjectById(id)
   }
 
+  async function deleteSubjectsById(ids: PlannedSubjectId[]) {
+    for (const id of ids) await deleteSubjectById(id)
+  }
+
   async function updateSubject(_subject: IPlannedSubjectUpdate) {
     const result = await service.patch(
       userId,
@@ -83,6 +87,7 @@ export const useUserSubjects = () => {
     refreshSubjectCatalog,
     saveNewSubject,
     deleteSubjectById,
+    deleteSubjectsById,
     fetchSubjects,
   }
 }
