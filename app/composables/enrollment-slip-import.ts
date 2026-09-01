@@ -1,4 +1,5 @@
 import { getNextAvailableEventColor } from '~/constants/event'
+import { toRaw } from 'vue'
 import type {
   IBasePlannedSubject,
   ISubject,
@@ -124,15 +125,19 @@ export const useEnrollmentSlipImport = ({
         replacementStarted.value = true
       }
       for (const item of readyItems.value) {
-        await saveSubject(item.plannedSubject)
+        const subject = structuredClone(toRaw(item.plannedSubject))
+        await saveSubject(subject)
         item.status = 'imported'
         item.message = `${item.message} · Agregado correctamente.`
       }
       close()
       return true
-    } catch {
+    } catch (cause) {
+      console.error('Enrollment slip replacement failed', cause)
       errorMessage.value =
-        'La sustitución se interrumpió. Puedes reintentar y continuaremos con los cursos pendientes.'
+        cause instanceof Error
+          ? `La sustitución se interrumpió: ${cause.message}`
+          : 'La sustitución se interrumpió. Puedes reintentar y continuaremos con los cursos pendientes.'
       error.value = true
       return false
     } finally {

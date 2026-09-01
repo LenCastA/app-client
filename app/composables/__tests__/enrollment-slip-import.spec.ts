@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { isProxy } from 'vue'
 import type { ISubject, ISubjectSchedule } from '~/interfaces/subject'
 import { useEnrollmentSlipImport } from '../enrollment-slip-import'
 
@@ -38,6 +39,41 @@ describe('useEnrollmentSlipImport', () => {
     expect(importer.readyItems.value[0]?.plannedSubject).toEqual(
       expect.objectContaining({ subject, schedules: [schedule] }),
     )
+  })
+
+  it('passes cloneable non-reactive data to persistence', async () => {
+    const saveSubject = vi.fn(async (input) => {
+      expect(isProxy(input)).toBe(false)
+      expect(isProxy(input.subject)).toBe(false)
+      expect(isProxy(input.schedules)).toBe(false)
+      expect(() => structuredClone(input)).not.toThrow()
+    })
+    const nestedSchedule = {
+      ...schedule,
+      sessions: [
+        {
+          id: 1,
+          schedule: { id: 1 },
+          classroom: { id: 1, code: 'S1-224' },
+          teacher: { id: 1, fullName: 'Docente' },
+          type: { id: 1, code: 'T', name: 'Teoría' },
+          day: 'Tuesday' as const,
+          startTime: '16:00:00',
+          endTime: '18:00:00',
+        },
+      ],
+    }
+    const importer = useEnrollmentSlipImport({
+      findSubjects: vi.fn().mockResolvedValue([subject]),
+      findSchedules: vi.fn().mockResolvedValue([nestedSchedule]),
+      replaceSubjects: vi.fn(),
+      saveSubject,
+    })
+    await importer.prepare([{ courseCode: 'SW603', section: 'U' }])
+
+    expect(isProxy(importer.readyItems.value[0]?.plannedSubject)).toBe(true)
+    await expect(importer.confirm()).resolves.toBe(true)
+    expect(saveSubject).toHaveBeenCalledOnce()
   })
 
   it('resolves courses even when the current selection contains them', async () => {
