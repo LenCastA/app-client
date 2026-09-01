@@ -12,6 +12,7 @@
     <template #top>
       <v-toolbar density="compact" flat>
         <v-toolbar-title>Cursos Disponibles</v-toolbar-title>
+        <SubjectEnrollmentSlipUploader @parsed="prepareEnrollmentImport" />
       </v-toolbar>
       <v-divider />
       <v-sheet flat class="pa-2">
@@ -126,6 +127,82 @@
         ¿Estás seguro de eliminar el curso de
         {{ selectedDelete.subject?.course?.name }}?
       </base-confirm-dialog>
+      <v-dialog v-model="enrollmentImportDialog" max-width="760">
+        <v-card title="Revisar cursos de la boleta">
+          <v-card-text>
+            <div
+              v-if="importingEnrollment && enrollmentImports.length === 0"
+              class="d-flex flex-column align-center ga-3 py-8"
+            >
+              <v-progress-circular indeterminate color="primary" />
+              <span>Buscando cursos y secciones en la carga activa…</span>
+            </div>
+            <v-alert
+              v-else-if="hasBlockingEnrollmentImports"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              No se reemplazará nada mientras haya cursos o secciones que no
+              existan en la carga activa.
+            </v-alert>
+            <v-alert
+              v-else-if="readyEnrollmentImports.length"
+              type="warning"
+              variant="tonal"
+              class="mb-4"
+            >
+              Se eliminarán los {{ mySubjects.length }} cursos actuales y se
+              reemplazarán por {{ readyEnrollmentImports.length }} cursos de la
+              boleta.
+            </v-alert>
+            <v-list lines="two">
+              <v-list-item
+                v-for="item in enrollmentImports"
+                :key="`${item.courseCode}-${item.section}`"
+                :title="`${item.courseCode} · Sección ${item.section}`"
+                :subtitle="item.message"
+              >
+                <template #prepend>
+                  <v-icon
+                    :color="
+                      item.status === 'ready' || item.status === 'imported'
+                        ? 'success'
+                        : 'warning'
+                    "
+                  >
+                    {{
+                      item.status === 'ready' || item.status === 'imported'
+                        ? mdiCheckCircleOutline
+                        : mdiAlertOutline
+                    }}
+                  </v-icon>
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              :disabled="importingEnrollment"
+              @click="closeEnrollmentImport"
+            >
+              Cancelar
+            </v-btn>
+            <v-btn
+              color="primary"
+              :loading="importingEnrollment"
+              :disabled="
+                readyEnrollmentImports.length === 0 ||
+                hasBlockingEnrollmentImports
+              "
+              @click="completeEnrollmentImport"
+            >
+              Reemplazar por {{ readyEnrollmentImports.length }} cursos
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
       <base-confirm-dialog
         v-model="dialogBulkDelete"
         title="Eliminar cursos seleccionados"
@@ -155,6 +232,13 @@
         No se pudieron eliminar todos los cursos seleccionados. Conservamos la
         selección pendiente para que puedas volver a intentarlo.
       </base-snackbar>
+      <base-snackbar
+        v-model="enrollmentImportError"
+        variant="error"
+        :timeout="6000"
+      >
+        {{ enrollmentImportErrorMessage }}
+      </base-snackbar>
       <base-confirm-dialog
         v-if="pendingUnrecommendedSubject"
         v-model="confirmUnrecommended"
@@ -171,7 +255,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { mdiBookSearchOutline, mdiDeleteOutline, mdiOpenInNew } from '@mdi/js'
+import {
+  mdiAlertOutline,
+  mdiBookSearchOutline,
+  mdiCheckCircleOutline,
+  mdiDeleteOutline,
+  mdiOpenInNew,
+} from '@mdi/js'
+import SubjectEnrollmentSlipUploader from '~/components/subject/EnrollmentSlipUploader.vue'
 import SubjectSchedulesEdit from '~/components/subject/SchedulesEdit.vue'
 import SubjectTableItemSectionList from '~/components/subject/table/ItemSectionList.vue'
 import SubjectTableNoData from '~/components/subject/table/NoData.vue'
@@ -361,6 +452,74 @@ const {
 } = useLocalHourlyLoad()
 await ensureLocalHourlyLoad()
 
+const findCatalogSubjects = async (searchValue: string) => {
+  if (localDataset.value) return searchSubjects(searchValue)
+  const hourlyLoadId = hourlyLoad.value?.id
+  if (!hourlyLoadId) return []
+  if (specialityId.value) {
+    return (
+      await subjectApi.findPageBySpeciality({
+        search: searchValue,
+        specialityId: specialityId.value,
+        hourlyLoadId,
+      })
+    ).content
+  }
+  if (studyPlanId.value) {
+    return (
+      await subjectApi.findPageByStudyPlan({
+        search: searchValue,
+        studyPlanId: studyPlanId.value,
+        hourlyLoadId,
+      })
+    ).content
+  }
+  return (
+    await subjectApi.findPageByFaculty({
+      search: searchValue,
+      facultyId: facultyId.value ?? 31,
+      hourlyLoadId,
+    })
+  ).content
+}
+
+const findSubjectSchedules = async (subject: ISubject) => {
+  if (localDataset.value) return schedulesForSubject(subject.id)
+  const hourlyLoadId = hourlyLoad.value?.id
+  if (!hourlyLoadId) return []
+  const response = await scheduleSubjectApi.findBySubjectIdAndHourlyLoadId(
+    subject.id,
+    hourlyLoadId,
+  )
+  return response.map(toAppScheduleSubject).map((item) => ({
+    ...item.schedule,
+    scheduleSubject: { id: item.id },
+  }))
+}
+
+const {
+  dialog: enrollmentImportDialog,
+  loading: importingEnrollment,
+  error: enrollmentImportError,
+  errorMessage: enrollmentImportErrorMessage,
+  items: enrollmentImports,
+  readyItems: readyEnrollmentImports,
+  hasBlockingItems: hasBlockingEnrollmentImports,
+  prepare: prepareEnrollmentImport,
+  close: closeEnrollmentImport,
+  confirm: confirmEnrollmentImport,
+} = useEnrollmentSlipImport({
+  findSubjects: findCatalogSubjects,
+  findSchedules: findSubjectSchedules,
+  replaceSubjects: () =>
+    deleteSubjectsById(mySubjects.value.map((subject) => subject.id)),
+  saveSubject: saveNewSubject,
+})
+
+const completeEnrollmentImport = async () => {
+  if (await confirmEnrollmentImport()) succcesAddCourse.value = true
+}
+
 const {
   data: schedules,
   status: statusSchedules,
@@ -532,30 +691,7 @@ const { data: subjects, status: statusSubjects } = await useAsyncData(
   async () => {
     const _search = search.value
     if (!_search) return []
-    const _specialityId = specialityId.value
-    if (localDataset.value) return searchSubjects(_search)
-    const _hourlyLoadId = hourlyLoad.value?.id
-    const _studyPlanId = studyPlanId.value
-    const _facultyId = facultyId.value
-    if (!_hourlyLoadId) return []
-    const response = _specialityId
-      ? await subjectApi.findPageBySpeciality({
-          search: _search,
-          specialityId: _specialityId,
-          hourlyLoadId: _hourlyLoadId,
-        })
-      : _studyPlanId
-        ? await subjectApi.findPageByStudyPlan({
-            search: _search,
-            studyPlanId: _studyPlanId,
-            hourlyLoadId: _hourlyLoadId,
-          })
-        : await subjectApi.findPageByFaculty({
-            search: _search,
-            facultyId: _facultyId ?? 31,
-            hourlyLoadId: _hourlyLoadId,
-          })
-    return response.content
+    return findCatalogSubjects(_search)
   },
   {
     watch: [
