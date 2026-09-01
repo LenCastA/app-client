@@ -27,6 +27,15 @@ describe('ConfirmDialog', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
+  it('supports a loading state while confirming', () => {
+    const wrapper = shallowMount(ConfirmDialog, {
+      props: { modelValue: true, loading: true },
+      global: { plugins: [vuetify] },
+    })
+
+    expect(wrapper.props('loading')).toBe(true)
+  })
+
   it('emits click:confirm when confirmed', () => {
     const wrapper = shallowMount(ConfirmDialog, {
       props: { modelValue: true },

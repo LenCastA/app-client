@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="internalValue" max-width="500px">
+  <v-dialog v-model="internalValue" :persistent="loading" max-width="500px">
     <v-card>
       <v-card-title class="text-headline-medium">
         <slot name="title">
@@ -16,6 +16,7 @@
         <v-btn
           color="blue-darken-1"
           variant="flat"
+          :disabled="loading"
           @click="emit('click:reject', $event)"
         >
           {{ rejectText }}
@@ -23,6 +24,7 @@
         <v-btn
           color="blue-darken-1"
           variant="text"
+          :loading="loading"
           @click="emit('click:confirm', $event)"
         >
           {{ confirmText }}
@@ -32,6 +34,7 @@
           v-if="closeable"
           color="blue-darken-1"
           variant="text"
+          :disabled="loading"
           @click="internalValue = false"
         >
           Cerrar
@@ -49,12 +52,14 @@ withDefaults(
     confirmText?: string
     rejectText?: string
     closeable?: boolean
+    loading?: boolean
   }>(),
   {
     title: 'Atención',
     confirmText: 'Si',
     rejectText: 'No',
     closeable: false,
+    loading: false,
   },
 )
 const emit = defineEmits<{
