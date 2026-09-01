@@ -135,7 +135,6 @@ export class SubjectSessionEvent extends Event implements IEvent {
   isCrossingRestricted(
     other: Event<string | undefined>,
     crossActivities: boolean,
-    crossPractices: boolean,
   ): boolean {
     const activityRestriction =
       !crossActivities &&
@@ -143,7 +142,6 @@ export class SubjectSessionEvent extends Event implements IEvent {
         other.hasActivityCrossingRestriction)
 
     const practiceRestriction =
-      !crossPractices &&
       this.hasSubjectSessionCrossingRestriction &&
       other.hasSubjectSessionCrossingRestriction
 

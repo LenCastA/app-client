@@ -49,14 +49,25 @@
 
     <template #emptyBody>
       <template v-if="result">
-        <v-alert prominent type="error">
-          <v-row align="center">
-            <v-col class="grow">
-              Lo sentimos, no hemos encontrados horarios para usted.
-            </v-col>
-          </v-row>
+        <v-alert
+          class="mb-4"
+          prominent
+          title="No encontramos horarios compatibles"
+          type="error"
+        >
+          Revisa los cruces detectados. Puedes cambiar las secciones de tus
+          cursos o ajustar las horas de cruce permitidas y volver a generar.
         </v-alert>
-        <occurrences-list :items="result?.occurrences ?? []" />
+        <template v-if="result.occurrences.length > 0">
+          <div class="text-subtitle-1 font-weight-medium mb-2">
+            Cruces detectados ({{ result.occurrences.length }})
+          </div>
+          <occurrences-list :items="result.occurrences" />
+        </template>
+        <v-alert v-else type="info" variant="tonal">
+          No se detectaron cruces específicos. Verifica que cada curso tenga al
+          menos una sección seleccionada y vuelve a generar.
+        </v-alert>
       </template>
     </template>
   </schedules-presentation>
@@ -126,7 +137,7 @@ const generateAllUserSchedules = async (crossings: number) => {
     mySubjects.value,
     myEvents.value,
     {
-      crossingSubjects: crossings,
+      crossingHours: crossings,
     },
   )
   loadingGenerate.value = false
@@ -141,6 +152,14 @@ const generateAllUserSchedules = async (crossings: number) => {
 
 <style>
 .cross-input {
-  max-width: 10rem;
+  min-width: 15rem;
+  max-width: 15rem;
+}
+
+@media (max-width: 600px) {
+  .cross-input {
+    min-width: 100%;
+    max-width: 100%;
+  }
 }
 </style>

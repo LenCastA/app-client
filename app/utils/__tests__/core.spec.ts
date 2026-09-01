@@ -393,7 +393,7 @@ describe('getSchedules', () => {
 
   describe('given two subjects with overlapping theory sessions', () => {
     describe('when crossingSubjects is 0', () => {
-      it('should reject the combination and record a CROSSING_BASIS occurrence', () => {
+      it('should reject the combination and record a CROSSING_EXCEEDED occurrence', () => {
         const s1 = makeSubject(1, [
           {
             scheduleId: 10,
@@ -409,7 +409,7 @@ describe('getSchedules', () => {
         const result = getSchedules([s1, s2], [], { crossingSubjects: 0 })
         expect(result.combinations).toHaveLength(0)
         expect(
-          result.occurrences.some((o) => o.type === 'CROSSING_BASIS'),
+          result.occurrences.some((o) => o.type === 'CROSSING_EXCEEDED'),
         ).toBe(true)
       })
     })
@@ -539,8 +539,67 @@ describe('getSchedules', () => {
     })
   })
 
+  describe('given theory-theory and theory-practice overlaps', () => {
+    const buildMixedCrossings = () => [
+      makeSubject(1, [
+        {
+          scheduleId: 10,
+          sessions: [{ id: 1, day: MON, ...T_08_10, typeCode: 'T' }],
+        },
+      ]),
+      makeSubject(2, [
+        {
+          scheduleId: 20,
+          sessions: [
+            {
+              id: 2,
+              day: MON,
+              startTime: '09:00:00',
+              endTime: '10:00:00',
+              typeCode: 'T',
+            },
+          ],
+        },
+      ]),
+      makeSubject(3, [
+        {
+          scheduleId: 30,
+          sessions: [
+            {
+              id: 3,
+              day: MON,
+              startTime: '08:00:00',
+              endTime: '09:00:00',
+              typeCode: 'P',
+            },
+          ],
+        },
+      ]),
+    ]
+
+    it('accepts both crossing types when their combined duration fits', () => {
+      const result = getSchedules(buildMixedCrossings(), [], {
+        crossingHours: 2,
+      })
+
+      expect(result.combinations).toHaveLength(1)
+      expect(result.combinations[0]!.crossings).toBe(2)
+    })
+
+    it('rejects them when their combined duration exceeds the hours allowed', () => {
+      const result = getSchedules(buildMixedCrossings(), [], {
+        crossingHours: 1,
+      })
+
+      expect(result.combinations).toHaveLength(0)
+      expect(
+        result.occurrences.some((item) => item.type === 'CROSSING_EXCEEDED'),
+      ).toBe(true)
+    })
+  })
+
   describe('given two subjects with overlapping practice sessions', () => {
-    describe('when crossPractices is false', () => {
+    describe('because practice-practice crossings are never allowed', () => {
       it('should reject the combination and record CROSSING_NOT_AVAILABLE', () => {
         const s1 = makeSubject(1, [
           {
@@ -556,7 +615,6 @@ describe('getSchedules', () => {
         ])
         const result = getSchedules([s1, s2], [], {
           crossingSubjects: 1,
-          crossPractices: false,
         })
         expect(result.combinations).toHaveLength(0)
         expect(
@@ -585,8 +643,7 @@ describe('getSchedules', () => {
             },
           ])
           const result = getSchedules([s1, s2, s3], [], {
-            crossingSubjects: 0,
-            crossPractices: false,
+            crossingHours: 1,
           })
           expect(result.combinations).toHaveLength(0)
           expect(
@@ -596,33 +653,8 @@ describe('getSchedules', () => {
       })
     })
 
-    describe('when crossPractices is true', () => {
-      it('should accept the combination and record CROSSING_BASIS', () => {
-        const s1 = makeSubject(1, [
-          {
-            scheduleId: 10,
-            sessions: [{ id: 1, day: MON, ...T_08_10, typeCode: 'P' }],
-          },
-        ])
-        const s2 = makeSubject(2, [
-          {
-            scheduleId: 20,
-            sessions: [{ id: 2, day: MON, ...T_09_11, typeCode: 'P' }],
-          },
-        ])
-        const result = getSchedules([s1, s2], [], {
-          crossingSubjects: 1,
-          crossPractices: true,
-        })
-        expect(result.combinations).toHaveLength(1)
-        expect(
-          result.occurrences.some((o) => o.type === 'CROSSING_BASIS'),
-        ).toBe(true)
-      })
-    })
-
     describe('when the two overlapping sessions have different types (T vs P)', () => {
-      it('should treat the crossing as CROSSING_BASIS regardless of crossPractices', () => {
+      it('should treat the crossing as CROSSING_BASIS', () => {
         const s1 = makeSubject(1, [
           {
             scheduleId: 10,
@@ -637,7 +669,6 @@ describe('getSchedules', () => {
         ])
         const result = getSchedules([s1, s2], [], {
           crossingSubjects: 1,
-          crossPractices: false,
         })
         expect(result.combinations).toHaveLength(1)
         expect(

@@ -6,13 +6,14 @@ import type {
 import type { IBasePlannedSubject } from '~/interfaces/subject'
 import type { IActivity } from '~/interfaces/event'
 import { ActivitySessionEvent, SubjectSessionEvent } from '~/models/Event'
+import { crossingDurationHours } from '~/utils/schedule-crossing'
 import type { UUID } from 'crypto'
 
 export type ScheduleOptions = {
   credits?: number
-  crossingSubjects: number
+  crossingHours?: number
+  crossingSubjects?: number
   crossActivities?: boolean
-  crossPractices?: boolean
 }
 
 export function getSchedules(
@@ -25,9 +26,8 @@ export function getSchedules(
 } {
   const options = {
     credits: 100,
-    crossingSubjects: 0,
+    crossingHours: _options?.crossingHours ?? _options?.crossingSubjects ?? 0,
     crossActivities: false,
-    crossPractices: false,
     ..._options,
   }
   const occurrencesMap = new Map<string, IBaseIntersectionOccurrence>()
@@ -81,7 +81,6 @@ export function getSchedules(
         .concat(baseEvents)
 
       for (const scheduleSubjectEvent of currentScheduleSubjectEvents) {
-        let intersections = 0
         for (const restScheduleEvent of restScheduleScheduleEvents) {
           if (scheduleSubjectEvent.day !== restScheduleEvent.day) continue
           const a = scheduleSubjectEvent.id
@@ -93,6 +92,10 @@ export function getSchedules(
             intersectionCache.set(occurrenceKey, doesIntersect)
           }
           if (doesIntersect) {
+            const crossingHours = crossingDurationHours(
+              scheduleSubjectEvent,
+              restScheduleEvent,
+            )
             const addOccurrence = (type: string) => {
               const key = `${occurrenceKey}:${type}`
               if (!occurrencesMap.has(key)) {
@@ -109,32 +112,26 @@ export function getSchedules(
             const notAvailable = scheduleSubjectEvent.isCrossingRestricted(
               restScheduleEvent,
               options.crossActivities ?? false,
-              options.crossPractices ?? false,
             )
-            if (
-              crossingCombination + intersections <=
-              options.crossingSubjects
-            ) {
-              intersections++
-            } else {
-              addOccurrence(
-                notAvailable ? 'CROSSING_NOT_AVAILABLE' : 'CROSSING_EXCEEDED',
-              )
-              break
-            }
             if (notAvailable) {
               addOccurrence('CROSSING_NOT_AVAILABLE')
               useCombination = false
+            } else if (
+              crossingCombination + crossingHours >
+              options.crossingHours
+            ) {
+              addOccurrence('CROSSING_EXCEEDED')
+              useCombination = false
+              break
             } else {
               addOccurrence('CROSSING_BASIS')
+              crossingCombination += crossingHours
             }
           }
         }
-
-        crossingCombination = crossingCombination + intersections
       }
     }
-    if (crossingCombination <= options.crossingSubjects && useCombination) {
+    if (crossingCombination <= options.crossingHours && useCombination) {
       const scheduleSubjectIds = scheduleSubjects.map(
         (c) => c.scheduleSubject.id,
       )
