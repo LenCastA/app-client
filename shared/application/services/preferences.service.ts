@@ -40,6 +40,13 @@ export class PreferencesService implements IPreferencesService {
       weekDays: initial.weekDays ?? [1, 2, 3, 4, 5, 6],
       crossings: initial.crossings ?? 0,
       maxGenerationHistory: initial.maxGenerationHistory ?? 10,
+      scheduleRanking: initial.scheduleRanking ?? {
+        freeDays: [],
+        rankingPriority: 'FEWER_DAYS',
+        avoidSingleClassDays: false,
+        minimizeGaps: true,
+        minimizeDays: true,
+      },
     })
     return this._create(userId, prefs)
   }

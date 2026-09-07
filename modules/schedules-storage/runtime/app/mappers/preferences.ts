@@ -9,6 +9,7 @@ export const toCreateRecord = (entity: BasePreferences) => ({
   weekDays: structuredClone(entity.weekDays),
   crossings: entity.crossings,
   maxGenerationHistory: entity.maxGenerationHistory,
+  scheduleRanking: entity.scheduleRanking,
   externalId: entity.externalId,
   revision: entity.revision,
 })

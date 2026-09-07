@@ -22,6 +22,11 @@ function makePreferences(
     crossings: 0,
     weekDays: [1, 2],
     maxGenerationHistory: 5,
+    scheduleRanking: {
+      freeDays: [],
+      minimizeGaps: true,
+      minimizeDays: true,
+    },
     ...overrides,
   }
 }
@@ -54,12 +59,18 @@ describe('useUserPreferences', () => {
   })
 
   it('returns preferences, weekDays, crossings, and maxGenerationHistory', () => {
-    const { preferences, weekDays, crossings, maxGenerationHistory } =
-      useUserPreferences()
+    const {
+      preferences,
+      weekDays,
+      crossings,
+      maxGenerationHistory,
+      scheduleRanking,
+    } = useUserPreferences()
     expect(preferences).toBeDefined()
     expect(weekDays).toBeDefined()
     expect(crossings).toBeDefined()
     expect(maxGenerationHistory).toBeDefined()
+    expect(scheduleRanking).toBeDefined()
   })
 
   it('fetchPreferences calls service.get and sets preferences when result is truthy', async () => {
@@ -79,17 +90,18 @@ describe('useUserPreferences', () => {
   })
 
   it('createPreferences calls service.create', async () => {
-    const created = {
-      id: crypto.randomUUID(),
-      crossings: 0,
-      weekDays: [1, 2],
-      maxGenerationHistory: 10,
-    }
-    mockCreatePreferences.mockResolvedValue(created)
+    const created = makePreferences({ maxGenerationHistory: 10 })
+    mockCreatePreferences.mockResolvedValue(asEntity(created))
     const { createPreferences } = useUserPreferences()
     await createPreferences()
     expect(mockCreatePreferences).toHaveBeenCalled()
     expect(useUserPreferencesStore().preferences).toEqual(created)
+    expect(useUserPreferencesStore().preferences).not.toBeInstanceOf(
+      Preferences,
+    )
+    expect(useUserPreferencesStore().scheduleRanking).toEqual(
+      created.scheduleRanking,
+    )
   })
 
   it('updateCrossings updates preferences and patches service', async () => {
@@ -159,6 +171,31 @@ describe('useUserPreferences', () => {
     await updateMaxGenerationHistory(20)
     expect(mockPatch).toHaveBeenCalledWith(expect.any(String), {
       maxGenerationHistory: 20,
+    })
+    expect(useUserPreferencesStore().preferences).toEqual(updated)
+  })
+
+  it('updates schedule ranking preferences through the service', async () => {
+    const scheduleRanking = {
+      freeDays: [5] as const,
+      earliestStartTime: '09:00',
+      latestEndTime: '18:00',
+      minimizeGaps: true,
+      minimizeDays: false,
+    }
+    const updated = makePreferences({
+      scheduleRanking: {
+        ...scheduleRanking,
+        freeDays: [...scheduleRanking.freeDays],
+      },
+    })
+    mockPatch.mockResolvedValue(asEntity(updated))
+
+    const { updateScheduleRanking } = useUserPreferences()
+    await updateScheduleRanking(updated.scheduleRanking!)
+
+    expect(mockPatch).toHaveBeenCalledWith(expect.any(String), {
+      scheduleRanking: updated.scheduleRanking,
     })
     expect(useUserPreferencesStore().preferences).toEqual(updated)
   })

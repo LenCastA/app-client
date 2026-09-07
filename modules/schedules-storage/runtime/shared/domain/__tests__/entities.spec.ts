@@ -114,4 +114,65 @@ describe('shared domain entities', () => {
     expect(preferences.maxGenerationHistory).toBe(10)
     expect(preferences.crossings).toBe(0)
   })
+
+  it('restores legacy preferences with safe ranking defaults', () => {
+    const preferences = Preferences.reconstitute({
+      id: makeUUID(),
+      weekDays: [1, 2, 3],
+      crossings: 0,
+      maxGenerationHistory: 10,
+      ...audit,
+    })
+    expect(preferences.scheduleRanking).toEqual({
+      freeDays: [],
+      minimizeGaps: true,
+      minimizeDays: true,
+    })
+  })
+
+  it('rejects invalid ranking days, times, and limits', () => {
+    const base = {
+      weekDays: [1, 2, 3] as const,
+      crossings: 0,
+      maxGenerationHistory: 10,
+      minimizeGaps: true,
+      minimizeDays: true,
+    }
+    expect(() =>
+      Preferences.create({
+        ...base,
+        weekDays: [...base.weekDays],
+        scheduleRanking: {
+          freeDays: [1, 1],
+          minimizeGaps: true,
+          minimizeDays: true,
+        },
+      }),
+    ).toThrowError(DomainError)
+    expect(() =>
+      Preferences.create({
+        ...base,
+        weekDays: [...base.weekDays],
+        scheduleRanking: {
+          freeDays: [],
+          preferredStartTime: '18:00',
+          preferredEndTime: '08:00',
+          minimizeGaps: true,
+          minimizeDays: true,
+        },
+      }),
+    ).toThrowError(DomainError)
+    expect(() =>
+      Preferences.create({
+        ...base,
+        weekDays: [...base.weekDays],
+        scheduleRanking: {
+          freeDays: [],
+          maxOccupiedDays: 8,
+          minimizeGaps: true,
+          minimizeDays: true,
+        },
+      }),
+    ).toThrowError(DomainError)
+  })
 })
