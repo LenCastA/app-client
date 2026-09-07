@@ -14,6 +14,7 @@ export const DEFAULT_SCHEDULE_RANKING: IScheduleRankingPreferences = {
 }
 
 export const useUserPreferencesStore = defineStore('user-preferences', () => {
+  const loadingPreferences = ref(true)
   const preferences = ref<IUserPreferences>()
 
   const weekDays = computed(
@@ -30,6 +31,7 @@ export const useUserPreferencesStore = defineStore('user-preferences', () => {
   )
 
   return {
+    loadingPreferences,
     preferences,
     weekDays,
     crossings,

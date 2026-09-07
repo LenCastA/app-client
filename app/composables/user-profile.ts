@@ -26,6 +26,7 @@ export const useUserProfile = () => {
     facultyId,
     specialityId,
     loadingProfile,
+    loadingAcademicConfig,
     speciality,
   } = storeToRefs(store)
 
@@ -45,9 +46,14 @@ export const useUserProfile = () => {
   }
 
   async function fetchAcademicConfig() {
-    const config = await academicConfigService.get(userId)
-    const dto = config ? toAcademicConfigDto(config) : undefined
-    hourlyLoad.value = dto?.hourlyLoad ?? undefined
+    loadingAcademicConfig.value = true
+    try {
+      const config = await academicConfigService.get(userId)
+      const dto = config ? toAcademicConfigDto(config) : undefined
+      hourlyLoad.value = dto?.hourlyLoad ?? undefined
+    } finally {
+      loadingAcademicConfig.value = false
+    }
   }
 
   async function updateHourlyLoad(newHourlyLoad: IHourlyLoad) {
@@ -165,6 +171,7 @@ export const useUserProfile = () => {
 
   return {
     loadingProfile,
+    loadingAcademicConfig,
     profile,
     hourlyLoad,
     isNewHourlyLoad,

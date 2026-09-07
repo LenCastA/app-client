@@ -6,6 +6,7 @@
     empty-message="Usted no tiene horarios generados"
     :schedules="result?.schedules ?? []"
     path="/skd"
+    :loading="loadingGeneration"
   >
     <template #top-items-right>
       <div class="d-flex align-self-center ga-2">
@@ -156,7 +157,7 @@ const {
   scheduleRanking,
 } = storeToRefs(preferencesStore)
 const { hourlyLoad } = storeToRefs(profileStore)
-const { result } = storeToRefs(generationStore)
+const { result, loadingGeneration } = storeToRefs(generationStore)
 const { items: myEvents } = storeToRefs(eventsStore)
 
 const showAddFavoriteMessage = ref(false)

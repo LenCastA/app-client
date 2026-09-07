@@ -16,11 +16,17 @@ export const useUserPreferences = () => {
     crossings,
     maxGenerationHistory,
     scheduleRanking,
+    loadingPreferences,
   } = storeToRefs(store)
 
   async function fetchPreferences() {
-    const prefs = await service.get(userId)
-    if (prefs) preferences.value = toPreferencesDto(prefs)
+    loadingPreferences.value = true
+    try {
+      const prefs = await service.get(userId)
+      if (prefs) preferences.value = toPreferencesDto(prefs)
+    } finally {
+      loadingPreferences.value = false
+    }
   }
 
   async function createPreferences(initial: Partial<IBasePreferences> = {}) {
@@ -53,6 +59,7 @@ export const useUserPreferences = () => {
     crossings,
     maxGenerationHistory,
     scheduleRanking,
+    loadingPreferences,
     fetchPreferences,
     createPreferences,
     updateCrossings,

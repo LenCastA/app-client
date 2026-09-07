@@ -16,19 +16,13 @@
         así, puedes borrar los datos manualmente desde el navegador.
       </p>
       <v-alert v-if="requestFailed" class="mt-3" type="warning" variant="tonal">
-        <template v-if="isStandalone">
-          Chrome decidió no conceder la protección. No existe un permiso manual;
-          vuelve a intentarlo después de usar más la aplicación.
-        </template>
-        <template v-else>
-          Chrome decidió no conceder la protección. Instala y abre Horext desde
-          el icono de instalación del navegador antes de volver a intentarlo.
-        </template>
+        Chrome no concedió la protección por ahora. Puedes volver a intentarlo
+        más adelante.
       </v-alert>
     </v-card-text>
     <v-card-actions class="px-0 pt-6 pb-0 justify-end">
       <v-btn
-        :loading="status === 'checking'"
+        :loading="status === StorageProtectionStatus.CHECKING"
         :prepend-icon="mdiRefresh"
         variant="text"
         class="text-none mr-2"
@@ -37,7 +31,7 @@
         Comprobar estado
       </v-btn>
       <v-btn
-        v-if="status === 'unprotected'"
+        v-if="status === StorageProtectionStatus.UNPROTECTED"
         color="primary"
         variant="flat"
         size="large"
@@ -54,25 +48,26 @@
 
 <script setup lang="ts">
 import { mdiRefresh } from '@mdi/js'
+import { StorageProtectionStatus } from '~/models/StorageProtectionStatus'
 
-const { status, isStandalone, requesting, requestFailed, check, request } =
+const { status, requesting, requestFailed, check, request } =
   usePersistentStorage()
 
 const statusLabel = computed(() => {
   switch (status.value) {
-    case 'protected':
+    case StorageProtectionStatus.PROTECTED:
       return 'Protegido'
-    case 'unprotected':
+    case StorageProtectionStatus.UNPROTECTED:
       return 'No protegido'
-    case 'unsupported':
+    case StorageProtectionStatus.UNSUPPORTED:
       return 'No compatible'
     default:
       return 'Comprobando…'
   }
 })
 const statusColor = computed(() => {
-  if (status.value === 'protected') return 'success'
-  if (status.value === 'unprotected') return 'warning'
+  if (status.value === StorageProtectionStatus.PROTECTED) return 'success'
+  if (status.value === StorageProtectionStatus.UNPROTECTED) return 'warning'
   return 'default'
 })
 
