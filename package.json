@@ -26,11 +26,11 @@
   },
   "lint-staged": {
     "*.{js,ts,vue}": [
-      "eslint --fix",
-      "prettier --write"
+      "node node_modules/eslint/bin/eslint.js --fix",
+      "node node_modules/prettier/bin/prettier.cjs --write"
     ],
     "*.{json,css,scss,md}": [
-      "prettier --write"
+      "node node_modules/prettier/bin/prettier.cjs --write"
     ]
   },
   "dependencies": {
