@@ -41,6 +41,26 @@ vi.mock('pinia', async (importOriginal) => {
 
 const vuetify = createVuetify()
 
+it('clears the selected schedule when filters remove every result', async () => {
+  const schedule = makeSchedule()
+  const wrapper = shallowMount(SchedulesPresentation, {
+    props: { schedules: [schedule] },
+    global: { plugins: [vuetify], renderStubDefaultSlot: true },
+    slots: {
+      summary: '<span>{{ params.item?.scheduleSubjectKey ?? "empty" }}</span>',
+    },
+  })
+  wrapper
+    .findComponent(SchedulesWindow)
+    .vm.$emit('update:currentSchedule', schedule)
+  await wrapper.vm.$nextTick()
+  expect(wrapper.text()).toContain('key-1')
+  await wrapper.setProps({ schedules: [] })
+  expect(wrapper.text()).toContain('empty')
+  expect(wrapper.text()).not.toContain('key-1')
+  wrapper.unmount()
+})
+
 function makeSchedule(): IGeneratedSchedule {
   return {
     id: makeUUID(),
