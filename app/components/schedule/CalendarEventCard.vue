@@ -1,31 +1,24 @@
 <template>
   <v-sheet
     :color="event.color"
-    class="text-white text-wrap pl-1 pl-sm-2 pa-1 ma-0 border-1"
-    width="100%"
+    class="calendar-event text-white"
+    :title="event.title"
   >
-    <template v-if="!event.code">
-      <v-icon v-if="$vuetify.display.smAndUp" start size="small">
-        {{ mdiInformation }}
-      </v-icon>
-      <span class="font-weight-bold">
-        {{ event.title }}
-      </span>
+    <template v-if="event.code">
+      <div class="calendar-event__course">
+        <strong>{{ event.code }} · {{ event.section }}</strong>
+        — {{ event.courseName ?? event.name }}
+      </div>
+      <div v-if="event.teacherName" class="calendar-event__teacher">
+        {{ event.teacherName }}
+      </div>
     </template>
-    <template v-else>
-      <span>
-        {{ event.code }}
-        {{ event.section }}
-        ({{ event.type }})
-      </span>
-      <br />
-      {{ event.name }}
-    </template>
+    <div v-else class="calendar-event__course calendar-event__activity">
+      {{ event.title }}
+    </div>
   </v-sheet>
 </template>
 <script setup lang="ts">
-import { mdiInformation } from '@mdi/js'
-
 defineProps<{
   event: {
     color: string
@@ -34,13 +27,55 @@ defineProps<{
     section?: string
     type: string
     name: string
+    courseName?: string
+    teacherName?: string
   }
 }>()
 </script>
-<style lang="scss">
-.border-1 {
+<style scoped>
+.calendar-event {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: 5px;
-  box-shadow: 0px 0px 8px 0px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e0e0e0;
+  font-size: 0.8125rem;
+  line-height: 1.15;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  container-type: size;
+}
+.calendar-event__course {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+}
+.calendar-event__teacher {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.calendar-event__activity {
+  font-weight: 600;
+  -webkit-line-clamp: 2;
+}
+@container (min-height: 3rem) {
+  .calendar-event__course {
+    -webkit-line-clamp: 2;
+  }
+}
+@container (min-height: 4rem) {
+  .calendar-event__teacher {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 </style>

@@ -7,11 +7,13 @@ import type {
   ReplicationState,
 } from './replicated-identity'
 import type { BrandUUID } from './ids'
+import type { IScheduleRankingPreferences } from './preferences'
 
 export interface IScheduleGenerationParameters {
   crossingsSetting: number
   weekDays: Weekdays[]
   hourlyLoadId: number
+  scheduleRanking?: IScheduleRankingPreferences
 }
 
 export type ScheduleGenerationId = BrandUUID<'ScheduleGenerationId'>

@@ -2,9 +2,9 @@
   <v-sheet>
     <h-calendar
       id="calendar"
-      first-interval="7"
-      interval-count="16"
-      interval-width="40"
+      :first-interval="timeRange.first"
+      :last-interval="timeRange.last"
+      :interval-height="2.5"
       :events="internalEvents"
       :weekdays="weekDays"
       @click:event="showEvent"
@@ -40,6 +40,10 @@ import type {
   IGeneratedSchedule,
 } from '~/interfaces/schedule'
 import type { IEventEmitData } from '~~/modules/h-calendar/runtime/types'
+import {
+  calendarTimeRange,
+  scheduleCalendarEvents,
+} from '~/utils/schedule-calendar'
 
 interface IScheduleCalendarEvent extends IEvent {
   weekDay: Weekdays
@@ -85,17 +89,8 @@ const showEvent = ({
   nativeEvent.stopPropagation()
 }
 
-const internalEvents = computed<IScheduleCalendarEvent[]>(
-  () =>
-    schedule.value?.events?.map((event) =>
-      markRaw({
-        ...event,
-        start: event.startTime,
-        end: event.endTime,
-        weekDay: event.day,
-        id: event.id,
-        name: event.title,
-      }),
-    ) ?? [],
+const internalEvents = computed(() =>
+  scheduleCalendarEvents(schedule.value).map((event) => markRaw(event)),
 )
+const timeRange = computed(() => calendarTimeRange(schedule.value.events))
 </script>

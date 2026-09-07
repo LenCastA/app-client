@@ -3,40 +3,35 @@
     v-model="selectedSubjectIds"
     :headers="SUBJECT_HEADERS"
     :items="mySubjects"
-    class="elevation-1"
+    class="elevation-1 subjects-table"
+    density="comfortable"
     mobile-breakpoint="md"
     :mobile="null"
     item-value="id"
     show-select
   >
     <template #top>
-      <v-toolbar density="compact" flat>
-        <v-toolbar-title>Cursos Disponibles</v-toolbar-title>
+      <div class="subjects-heading">
+        <h2>Cursos disponibles</h2>
         <SubjectEnrollmentSlipUploader @parsed="prepareEnrollmentImport" />
-      </v-toolbar>
-      <v-divider />
-      <v-sheet flat class="pa-2">
-        <v-row density="comfortable">
-          <v-col cols="12">
-            <SubjectSearchContext
-              :speciality-name="activeSpecialityName"
-              :study-plan-name="activeStudyPlanName"
-              :report-url="studyPlanReportUrl"
-            />
-          </v-col>
-          <v-col cols="12">
-            <SubjectSelect
-              v-model="selectedSubject"
-              v-model:search="search"
-              v-model:menu="openSearchMenu"
-              :status-subjects="statusSubjects"
-              :subjects="availableCourses"
-              @update:model-value="addNewSubject"
-            />
-          </v-col>
-        </v-row>
+      </div>
+      <v-sheet flat class="subject-search">
+        <SubjectSearchContext
+          :speciality-name="activeSpecialityName"
+          :study-plan-name="activeStudyPlanName"
+          :report-url="studyPlanReportUrl"
+        />
+        <SubjectSelect
+          v-model="selectedSubject"
+          v-model:search="search"
+          v-model:menu="openSearchMenu"
+          :status-subjects="statusSubjects"
+          :subjects="availableCourses"
+          @update:model-value="addNewSubject"
+        />
         <v-dialog
           v-model="dialog"
+          scrollable
           density="comfortable"
           max-width="800"
           @click:outside="close"
@@ -54,26 +49,62 @@
         </v-dialog>
       </v-sheet>
 
-      <v-toolbar density="compact" flat>
-        <v-toolbar-title>
-          <span class="hidden-xs-and-down">Cursos </span> Seleccionados
-        </v-toolbar-title>
-        <v-divider class="mx-4" inset vertical />
+      <div class="subjects-heading subjects-heading--selected">
+        <div class="subjects-heading__title">
+          <h2>Cursos seleccionados</h2>
+          <v-chip size="small" color="primary">{{ mySubjects.length }}</v-chip>
+        </div>
+        <v-btn to="/generator" color="primary" variant="flat">
+          Generar horarios
+        </v-btn>
+      </div>
+      <div v-if="mySubjects.length" class="course-selection-bar">
+        <v-checkbox
+          :model-value="allSubjectsSelected"
+          :indeterminate="selectedSubjectIds.length > 0 && !allSubjectsSelected"
+          :disabled="deletingSubjects"
+          label="Seleccionar todos los cursos"
+          color="primary"
+          density="compact"
+          hide-details
+          @update:model-value="selectAllSubjects"
+        />
+        <span
+          class="selection-count text-body-2 text-medium-emphasis"
+          aria-live="polite"
+          >{{ selectedSubjectIds.length }} de
+          {{ mySubjects.length }} seleccionados para eliminar</span
+        >
         <v-btn
           v-if="selectedSubjectIds.length"
-          class="mr-2"
+          class="selection-delete"
           color="error"
           variant="tonal"
+          density="comfortable"
           :prepend-icon="mdiDeleteOutline"
           :loading="deletingSubjects"
           @click="openBulkDelete"
         >
           Eliminar ({{ selectedSubjectIds.length }})
         </v-btn>
-        <v-btn to="/generator" color="primary">
-          Generar<span class="hidden-xs-and-down">&nbsp; Horarios</span>
-        </v-btn>
-      </v-toolbar>
+      </div>
+    </template>
+    <template #[`header.data-table-select`]>
+      <span class="d-sr-only">Seleccionar cursos para eliminar</span>
+    </template>
+    <template #[`item.data-table-select`]="{ item, props: selectionProps }">
+      <v-checkbox-btn
+        v-bind="selectionProps"
+        :aria-label="`Seleccionar ${item.subject.course.id} para eliminar`"
+        :label="$vuetify.display.smAndDown ? 'Seleccionar curso' : undefined"
+        density="compact"
+        color="primary"
+      />
+    </template>
+    <template #[`item.subject.studyPlan.name`]="{ item }">
+      <span class="text-body-2 text-medium-emphasis">{{
+        item.subject.studyPlan.name || item.subject.studyPlan.code
+      }}</span>
     </template>
     <template #no-data>
       <SubjectTableNoData />
@@ -315,6 +346,17 @@ const {
 } = useUserSubjects()
 
 const selectedSubjectIds = ref<PlannedSubjectId[]>([])
+const allSubjectsSelected = computed(
+  () =>
+    mySubjects.value.length > 0 &&
+    selectedSubjectIds.value.length === mySubjects.value.length,
+)
+const selectAllSubjects = (selected: boolean | null) => {
+  if (!deletingSubjects.value)
+    selectedSubjectIds.value = selected
+      ? mySubjects.value.map((subject) => subject.id)
+      : []
+}
 const dialogBulkDelete = ref(false)
 
 const succcesAddCourse = ref(false)
@@ -706,3 +748,83 @@ const { data: subjects, status: statusSubjects } = await useAsyncData(
   },
 )
 </script>
+
+<style scoped>
+.subjects-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 16px;
+}
+.subjects-heading h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.subjects-heading__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.subjects-heading--selected {
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgba(var(--v-theme-on-surface), 0.035);
+}
+.subject-search {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.course-selection-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 4px 16px;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.course-selection-bar .v-input {
+  flex: 0 1 auto;
+}
+.selection-delete {
+  margin-left: auto;
+}
+.subjects-table :deep(th) {
+  font-size: 0.8125rem;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+.subjects-table :deep(td) {
+  padding-block: 8px !important;
+}
+.subjects-table :deep(.v-data-table-header__select-all) {
+  display: none;
+}
+.subjects-table :deep(.v-data-table__tr--mobile > td) {
+  min-height: 32px;
+  height: auto;
+  padding-block: 4px !important;
+  grid-template-columns: minmax(90px, 0.7fr) minmax(0, 1.3fr);
+}
+.subjects-table
+  :deep(.v-data-table__tr--mobile > .v-data-table__td--select-row) {
+  grid-template-columns: 1fr;
+  padding-top: 12px !important;
+}
+.subjects-table :deep(.v-data-table__tr--mobile > td:last-child) {
+  padding-bottom: 12px !important;
+}
+@media (max-width: 600px) {
+  .subjects-heading > .v-btn {
+    flex-grow: 1;
+  }
+  .selection-count {
+    flex-basis: 100%;
+  }
+  .selection-delete {
+    margin-left: 0;
+  }
+}
+</style>

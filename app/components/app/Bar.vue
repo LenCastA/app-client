@@ -1,5 +1,10 @@
 <template>
-  <v-app-bar flat height="64" class="app-bar border-b px-2">
+  <v-app-bar
+    flat
+    height="64"
+    extension-height="44"
+    class="app-bar border-b px-2"
+  >
     <template #prepend>
       <div class="d-flex align-center ga-2">
         <v-app-bar-nav-icon
@@ -8,8 +13,16 @@
           variant="text"
           @click.stop="toggleDrawer"
         />
-        <AppHourlyLoadInfo :hourly-load="hourlyLoad" class="pa-0" />
+        <AppHourlyLoadInfo
+          v-if="$vuetify.display.mdAndUp"
+          :hourly-load="hourlyLoad"
+          class="app-bar__load pa-0"
+        />
       </div>
+    </template>
+
+    <template v-if="$vuetify.display.smAndDown" #extension>
+      <AppHourlyLoadInfo :hourly-load="hourlyLoad" class="w-100 px-3 pb-1" />
     </template>
 
     <template #title>
@@ -58,6 +71,9 @@ const toggleDrawer = () => {
 .app-bar {
   position: relative;
   transition: all 0.2s ease-in-out;
+}
+.app-bar__load {
+  max-width: 32vw;
 }
 
 .app-bar__brand {

@@ -5,6 +5,9 @@
     v-model:search="search"
     v-model:menu="openSearchMenu"
     variant="outlined"
+    density="comfortable"
+    :prepend-inner-icon="mdiMagnify"
+    placeholder="Escribe el código o nombre del curso"
     :items="subjects"
     label="Buscar cursos"
     return-object
@@ -60,17 +63,6 @@
           </v-chip>
         </template>
       </v-list-item>
-    </template>
-    <template #append>
-      <label for="search-course">
-        <v-progress-circular
-          v-if="statusSubjects === 'pending'"
-          size="20"
-          indeterminate
-          color="primary"
-        />
-        <v-icon v-else color="primary">{{ mdiMagnify }}</v-icon>
-      </label>
     </template>
   </v-autocomplete>
 </template>

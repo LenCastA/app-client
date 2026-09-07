@@ -48,6 +48,9 @@ describe('GeneratedSchedule Calendar', () => {
       },
     })
     expect(wrapper.exists()).toBe(true)
+    const calendar = wrapper.findComponent({ name: 'HCalendar' })
+    expect(calendar.props('firstInterval')).toBe(8)
+    expect(calendar.props('lastInterval')).toBe(22)
   })
 
   it('showEvent method updates state correctly', async () => {

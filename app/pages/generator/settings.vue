@@ -16,11 +16,14 @@
           <v-card-title class="text-h5 font-weight-bold px-0 pt-0 mb-1">
             Configuración de calendario
           </v-card-title>
-          <v-card-subtitle class="px-0 pb-4 text-body-1 text-medium-emphasis">
-            Seleccione los días de la semana que desea mostrar en el calendario
+          <v-card-subtitle
+            class="px-0 pb-3 text-body-2 text-medium-emphasis text-wrap"
+          >
+            De lunes a sábado por defecto. Activa domingo si lo necesitas para
+            tus actividades.
           </v-card-subtitle>
           <v-card-text class="px-0 py-2">
-            <div class="d-flex flex-wrap ga-3">
+            <div class="calendar-weekdays">
               <v-checkbox
                 v-for="(day, index) in WEEK_DAYS_NAMES"
                 :key="day"
@@ -30,7 +33,7 @@
                 multiple
                 hide-details
                 density="comfortable"
-                class="mr-3"
+                class="ma-0"
               />
             </div>
           </v-card-text>
@@ -255,3 +258,11 @@ const save = async () => {
   isCalendarUserEdited.value = false
 }
 </script>
+
+<style scoped>
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 4px 16px;
+}
+</style>

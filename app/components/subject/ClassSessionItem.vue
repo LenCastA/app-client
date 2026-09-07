@@ -1,18 +1,18 @@
 <template>
   <tr>
-    <td class="text-left">
+    <td class="text-left" data-label="Día">
       <label :for="forLabel">{{ dayWeek }}</label>
     </td>
-    <td class="text-left">
+    <td class="text-left" data-label="Horario">
       <label :for="forLabel">{{ timeInterval }}</label>
     </td>
-    <td class="text-left">
+    <td class="text-left session-teacher" data-label="Docente">
       <label :for="forLabel">{{ teacherFullName }}</label>
     </td>
-    <td class="text-left">
+    <td class="text-left" data-label="Tipo">
       <label :for="forLabel">{{ type }}</label>
     </td>
-    <td class="text-left">
+    <td class="text-left" data-label="Aula">
       <label :for="forLabel">{{ classroom }}</label>
     </td>
   </tr>

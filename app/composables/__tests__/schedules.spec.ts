@@ -1,133 +1,132 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
-
-import CoreWorkerClass from '@/assets/workers/core?worker'
-
+import CoreWorker from '@/assets/workers/core?worker'
 import { useSchedulesGenerator } from '../schedules'
 
-// Mock the CoreWorker module
-vi.mock('@/assets/workers/core?worker', () => ({
-  default: vi.fn(),
-}))
+vi.mock('@/assets/workers/core?worker', () => ({ default: vi.fn() }))
 
-// Mock getSchedules auto-import
-const { mockGetSchedules } = vi.hoisted(() => ({ mockGetSchedules: vi.fn() }))
-mockNuxtImport('getSchedules', () => mockGetSchedules)
-
-const mockPostMessage = vi.fn()
-const mockTerminate = vi.fn()
-const mockAddEventListener = vi.fn()
-const mockRemoveEventListener = vi.fn()
-
-function createMockWorker() {
-  return {
-    postMessage: mockPostMessage,
-    terminate: mockTerminate,
-    addEventListener: mockAddEventListener,
-    removeEventListener: mockRemoveEventListener,
-  }
+class FakeWorker extends EventTarget {
+  postMessage = vi.fn()
+  terminate = vi.fn()
+  override removeEventListener = vi.fn(super.removeEventListener)
 }
+let worker: FakeWorker
+const result = { occurrences: [], combinations: [] }
+const create = () =>
+  mount(defineComponent({ setup: useSchedulesGenerator, template: '<div />' }))
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(CoreWorkerClass).mockImplementation(createMockWorker as never)
+  worker = new FakeWorker()
+  vi.mocked(CoreWorker).mockImplementation(function () {
+    return worker as unknown as Worker
+  })
 })
+afterEach(() => vi.useRealTimers())
 
 describe('useSchedulesGenerator', () => {
-  it('returns loadSchedules function', () => {
-    const TestComponent = defineComponent({
-      setup() {
-        const { loadSchedules } = useSchedulesGenerator()
-        return { loadSchedules }
-      },
-      template: '<div />',
-    })
-    const wrapper = mount(TestComponent)
-    expect(wrapper.vm.loadSchedules).toBeTypeOf('function')
+  it('serializes inputs and releases the worker and listeners after success', async () => {
+    const wrapper = create()
+    const pending = wrapper.vm.loadSchedules([], [], { crossingHours: 1.5 })
+    expect(JSON.parse(worker.postMessage.mock.calls[0]![0])).toEqual([
+      [],
+      [],
+      { crossingHours: 1.5 },
+    ])
+    worker.dispatchEvent(new MessageEvent('message', { data: { result } }))
+    await expect(pending).resolves.toEqual(result)
+    expect(worker.terminate).toHaveBeenCalledOnce()
+    expect(worker.removeEventListener).toHaveBeenCalledTimes(3)
     wrapper.unmount()
   })
 
-  it('creates a CoreWorker on mount', () => {
-    const TestComponent = defineComponent({
-      setup() {
-        useSchedulesGenerator()
-        return {}
-      },
-      template: '<div />',
-    })
-    const wrapper = mount(TestComponent, { attachTo: document.body })
-    expect(CoreWorkerClass).toHaveBeenCalled()
-    wrapper.unmount()
-  })
+  it.each(['error', 'messageerror', 'reported'])(
+    'rejects %s without rerunning work on the UI thread',
+    async (kind) => {
+      const wrapper = create()
+      const pending = wrapper.vm.loadSchedules([], [], {})
+      const assertion = expect(pending).rejects.toThrow()
+      worker.dispatchEvent(
+        kind === 'reported'
+          ? new MessageEvent('message', {
+              data: { error: 'Invalid schedule time' },
+            })
+          : kind === 'error'
+            ? new ErrorEvent('error', { message: 'Worker failed' })
+            : new MessageEvent('messageerror'),
+      )
+      await assertion
+      expect(worker.terminate).toHaveBeenCalledOnce()
+      wrapper.unmount()
+    },
+  )
 
-  it('terminates the worker on unmount', () => {
-    const TestComponent = defineComponent({
-      setup() {
-        useSchedulesGenerator()
-        return {}
-      },
-      template: '<div />',
+  it('rejects worker startup failures', async () => {
+    vi.mocked(CoreWorker).mockImplementation(() => {
+      throw new Error('Unavailable')
     })
-    const wrapper = mount(TestComponent, { attachTo: document.body })
-    wrapper.unmount()
-    expect(mockTerminate).toHaveBeenCalled()
-  })
-
-  it('loadSchedules posts a message to the worker', async () => {
-    let capturedResolve: (value: unknown) => void
-    mockAddEventListener.mockImplementation(
-      (_event: string, handler: (e: MessageEvent) => void) => {
-        capturedResolve = (data) => handler({ data } as MessageEvent)
-      },
+    const wrapper = create()
+    await expect(wrapper.vm.loadSchedules([], [], {})).rejects.toThrow(
+      'No se pudo iniciar',
     )
-
-    const TestComponent = defineComponent({
-      setup() {
-        const { loadSchedules } = useSchedulesGenerator()
-        return { loadSchedules }
-      },
-      template: '<div />',
-    })
-    const wrapper = mount(TestComponent, { attachTo: document.body })
-
-    const resultData = {
-      occurrences: [],
-      schedules: [],
-      combinations: [],
-    }
-
-    const promise = wrapper.vm.loadSchedules([], [], {} as never)
-    capturedResolve!(resultData)
-    const result = await promise
-    expect(result).toEqual(resultData)
-    expect(mockPostMessage).toHaveBeenCalled()
     wrapper.unmount()
   })
 
-  it('loadSchedulesViaWorker rejects when worker is not loaded', async () => {
-    const TestComponent = defineComponent({
-      setup() {
-        const { loadSchedules } = useSchedulesGenerator()
-        return { loadSchedules }
-      },
-      template: '<div />',
+  it('cancels a job and permits another generation', async () => {
+    const wrapper = create()
+    const pending = wrapper.vm.loadSchedules([], [], {})
+    const assertion = expect(pending).rejects.toThrow('cancelada')
+    wrapper.vm.cancelGeneration()
+    await assertion
+    const next = wrapper.vm.loadSchedules([], [], {})
+    worker.dispatchEvent(new MessageEvent('message', { data: { result } }))
+    await expect(next).resolves.toEqual(result)
+    wrapper.unmount()
+  })
+
+  it('rejects pending work on unmount', async () => {
+    const wrapper = create()
+    const assertion = expect(
+      wrapper.vm.loadSchedules([], [], {}),
+    ).rejects.toThrow('cancelada')
+    wrapper.unmount()
+    await assertion
+  })
+
+  it('settles jobs that never send a response', async () => {
+    vi.useFakeTimers()
+    const wrapper = create()
+    const assertion = expect(
+      wrapper.vm.loadSchedules([], [], {}),
+    ).rejects.toThrow('2 minutos')
+    await vi.advanceTimersByTimeAsync(120_000)
+    await assertion
+    expect(worker.terminate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('rejects serialization failures and releases the worker', async () => {
+    worker.postMessage.mockImplementation(() => {
+      throw new Error('DataCloneError')
     })
-    const wrapper = mount(TestComponent, { attachTo: document.body })
+    const wrapper = create()
+    await expect(wrapper.vm.loadSchedules([], [], {})).rejects.toThrow(
+      'enviar los cursos',
+    )
+    expect(worker.terminate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
 
-    // Worker is null because we return null in the constructor mock
-    // loadSchedules catches the error and falls back to getSchedules
-    mockGetSchedules.mockReturnValue({
-      occurrences: [],
-      schedules: [],
-      combinations: [],
-    })
-
-    // Call before mount gives null worker, falls back to getSchedules
-    const gen = useSchedulesGenerator()
-    gen.loadSchedules([], [], {} as never)
-
+  it('cancels the previous request before starting a replacement', async () => {
+    const wrapper = create()
+    const assertion = expect(
+      wrapper.vm.loadSchedules([], [], {}),
+    ).rejects.toThrow('cancelada')
+    const next = wrapper.vm.loadSchedules([], [], {})
+    await assertion
+    worker.dispatchEvent(new MessageEvent('message', { data: { result } }))
+    await expect(next).resolves.toEqual(result)
     wrapper.unmount()
   })
 })

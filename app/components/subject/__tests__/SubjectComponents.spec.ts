@@ -10,6 +10,7 @@ import ScheduleSection from '~/components/subject/ScheduleSection.vue'
 import SchedulesEdit from '~/components/subject/SchedulesEdit.vue'
 import Select from '~/components/subject/Select.vue'
 import ItemActions from '~/components/subject/table/ItemActions.vue'
+import { VCheckbox } from 'vuetify/components'
 
 const vuetify = createVuetify()
 
@@ -46,6 +47,44 @@ function makeBaseSubjectSchedules(): IBasePlannedSubject {
 }
 
 describe('subject/ScheduleItem', () => {
+  it('selects all available sections, reflects partial selection, and clears them', async () => {
+    const first = { ...makeSchedule(), id: 1, section: { id: 'U' } }
+    const second = { ...makeSchedule(), id: 2, section: { id: 'V' } }
+    const wrapper = mount(ScheduleItem, {
+      props: {
+        schedules: [first, second],
+        loading: false,
+        modelValue: [first],
+      },
+      global: { plugins: [vuetify] },
+    })
+    const all = wrapper
+      .findAllComponents(VCheckbox)
+      .find(
+        (checkbox) =>
+          checkbox.props('label') === 'Seleccionar todas las secciones',
+      )!
+    expect(all.props('indeterminate')).toBe(true)
+    all.vm.$emit('update:modelValue', true)
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([[first, second]])
+    await wrapper.setProps({ modelValue: [first, second] })
+    expect(all.props('modelValue')).toBe(true)
+    all.vm.$emit('update:modelValue', false)
+    expect(wrapper.emitted('update:modelValue')?.[1]).toEqual([[]])
+    wrapper.unmount()
+  })
+
+  it('does not change section selection while loading', () => {
+    const wrapper = mount(ScheduleItem, {
+      props: { schedules: [], loading: true, modelValue: [] },
+      global: { plugins: [vuetify] },
+    })
+    const all = wrapper.findComponent(VCheckbox)
+    expect(all.props('disabled')).toBe(true)
+    all.vm.$emit('update:modelValue', true)
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    wrapper.unmount()
+  })
   it('renders with loading state', () => {
     const wrapper = shallowMount(ScheduleItem, {
       props: {

@@ -10,7 +10,7 @@ describe('useUserPreferencesStore', () => {
 
   it('returns default weekDays when preferences not set', () => {
     const store = useUserPreferencesStore()
-    expect(store.weekDays).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(store.weekDays).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('returns default crossings=0 when preferences not set', () => {
