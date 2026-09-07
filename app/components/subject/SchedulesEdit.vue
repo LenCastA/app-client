@@ -1,7 +1,7 @@
 <template>
   <v-card :loading="loading">
-    <v-card-title>
-      <div class="d-flex align-center w-100">
+    <v-card-title class="px-4 pt-4 pb-2">
+      <div class="d-flex align-center ga-2">
         <v-menu :close-on-content-click="false" location="right center">
           <template #activator="{ props: menuActivatorProps }">
             <v-btn
@@ -29,8 +29,7 @@
             </v-card-text>
           </v-card>
         </v-menu>
-        <v-spacer />
-        <span class="text-headline-medium">{{ title }}</span>
+        <span class="section-editor-title">{{ title }}</span>
       </div>
     </v-card-title>
     <v-card-text>
@@ -40,7 +39,7 @@
         :loading="loading"
       />
     </v-card-text>
-    <v-card-actions>
+    <v-card-actions class="px-4 pb-4 ga-2 flex-wrap">
       <v-btn
         v-if="reportUrl"
         :href="reportUrl"
@@ -58,8 +57,13 @@
       <v-btn color="primary" variant="text" @click="$emit('cancel')">
         Cancelar
       </v-btn>
-      <v-btn color="primary" variant="text" @click="saveSections">
-        Guardar
+      <v-btn
+        color="primary"
+        variant="flat"
+        :disabled="loading"
+        @click="saveSections"
+      >
+        Guardar secciones
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -123,3 +127,15 @@ const title = computed(() => {
   return `${course?.id} - ${course?.name}`
 })
 </script>
+
+<style scoped>
+.section-editor-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+</style>

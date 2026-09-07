@@ -1,14 +1,10 @@
 <template>
-  <v-row class="pa-2 align-center">
-    <v-col v-if="$slots.actions" cols="auto" class="mr-auto">
+  <div class="subject-totals">
+    <div v-if="$slots.actions" class="subject-totals__actions">
       <slot name="actions" />
-    </v-col>
-    <v-col cols="auto">
-      <v-chip color="green" label>
-        Total de créditos: {{ totalCredits }}
-      </v-chip>
-    </v-col>
-  </v-row>
+    </div>
+    <v-chip color="green" label> Total de créditos: {{ totalCredits }} </v-chip>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -28,3 +24,17 @@ const totalCredits = computed(() => {
   }, 0)
 })
 </script>
+
+<style scoped>
+.subject-totals {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 16px;
+}
+.subject-totals__actions {
+  margin-right: auto;
+}
+</style>

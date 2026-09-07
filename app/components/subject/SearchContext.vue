@@ -1,11 +1,6 @@
 <template>
-  <v-card
-    variant="tonal"
-    class="pa-2"
-    aria-label="Contexto de búsqueda de cursos"
-  >
+  <v-card variant="flat" aria-label="Contexto de búsqueda de cursos">
     <div class="d-flex flex-wrap align-center ga-2">
-      <v-icon :icon="mdiMagnify" color="primary" size="small" />
       <span class="text-caption text-medium-emphasis">Buscando en</span>
 
       <v-chip
@@ -98,7 +93,6 @@ import {
   mdiChevronRight,
   mdiFlagOutline,
   mdiInformationOutline,
-  mdiMagnify,
   mdiOpenInNew,
   mdiSchoolOutline,
   mdiTuneVariant,
